@@ -1,0 +1,29 @@
+{
+    "MIFSOD": {
+      "PASCAL-S": {
+        "path": "/home/yy/workspace/xxSOD/preds/PASCAL-S",
+        "suffix": ".png"
+      },
+      "ECSSD": {
+        "path": "/home/yy/workspace/xxSOD/preds/ECSSD",
+        "suffix": ".png"
+      },
+      "HKU-IS": {
+        "path": "/home/yy/workspace/xxSOD/preds/HKU-IS",
+        "suffix": ".png"
+      },
+      "DUT-O": {
+        "path": "/home/yy/workspace/xxSOD/preds/DUT-O",
+        "suffix": ".png"
+      },
+      "DUTS-TE": {
+        "path": "/home/yy/workspace/xxSOD/preds/DUTS-TE",
+        "suffix": ".png"
+      },
+      "SOD": {
+        "path": "/home/yy/workspace/xxSOD/preds/SOD",
+        "suffix": ".png"
+      }
+    }
+  }
+  

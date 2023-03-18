@@ -44,7 +44,7 @@ def load_test_list(test_path, data_root):
 
 
 class ImageData(data.Dataset):
-    def __init__(self, dataset_list, data_root, transform, mode, img_size=None, scale_size=None, t_transform=None, label_1_16_transform=None, label_1_8_transform=None, label_1_4_transform=None):
+    def __init__(self, dataset_list, data_root, transform, mode, img_size=None, scale_size=None, t_transform=None, label_1_16_transform=None, label_1_8_transform=None, label_1_4_transform=None, label_1_2_transform=None):
 
         if mode == 'train':
             self.image_path, self.label_path = load_list(dataset_list, data_root)
@@ -56,6 +56,7 @@ class ImageData(data.Dataset):
         self.label_1_16_transform = label_1_16_transform
         self.label_1_8_transform = label_1_8_transform
         self.label_1_4_transform = label_1_4_transform
+        self.label_1_2_transform = label_1_2_transform
         self.mode = mode
         self.img_size = img_size
         self.scale_size = scale_size
@@ -94,10 +95,11 @@ class ImageData(data.Dataset):
             label_1_16 = self.label_1_16_transform(new_label)
             label_1_8 = self.label_1_8_transform(new_label)
             label_1_4 = self.label_1_4_transform(new_label)
+            label_1_2 = self.label_1_2_transform(new_label)
             label_224 = self.t_transform(new_label)
 
 
-            return new_img, label_224, label_1_16, label_1_8, label_1_4
+            return new_img, label_224, label_1_16, label_1_8, label_1_4, label_1_2
         else:
 
             image = self.transform(image)
@@ -132,6 +134,10 @@ def get_loader(dataset_list, data_root, img_size, mode='train'):
             transforms.Resize((img_size//4, img_size//4), interpolation=Image.NEAREST),
             transforms.ToTensor(),
         ])
+        label_1_2_transform = transforms.Compose([
+            transforms.Resize((img_size//2, img_size//2), interpolation=Image.NEAREST),
+            transforms.ToTensor(),
+        ])
         if img_size == 224:
             scale_size = 256
         else:
@@ -144,7 +150,7 @@ def get_loader(dataset_list, data_root, img_size, mode='train'):
         ])
 
     if mode == 'train':
-        dataset = ImageData(dataset_list, data_root, transform, mode, img_size, scale_size, t_transform, label_1_16_transform, label_1_8_transform, label_1_4_transform)
+        dataset = ImageData(dataset_list, data_root, transform, mode, img_size, scale_size, t_transform, label_1_16_transform, label_1_8_transform, label_1_4_transform, label_1_2_transform)
     else:
         dataset = ImageData(dataset_list, data_root, transform, mode)
 

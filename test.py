@@ -18,14 +18,14 @@ import transforms as trans
 #from icon import ICON
 from tqdm import tqdm
 #from branch import branch
-from M3Net import M3Net
+from xxSOD import M3Net
 def get_pred_dir(model, data_root = '/home/yy/datasets/', save_path = 'preds/',methods = 'DUTS+DUT-O+ECSSD+HKU-IS+PASCAL-S+SOD'):
     batch_size = 1
     test_paths = methods.split('+')
     for dataset_setname in test_paths:
         #print('get '+dataset_setname)
         img_root = dataset_setname + ''
-        test_dataset = get_loader(img_root, data_root, 224, mode='test')
+        test_dataset = get_loader(img_root, data_root, 384, mode='test')
         test_loader = torch.utils.data.DataLoader(dataset=test_dataset, batch_size=batch_size, shuffle=False, num_workers=1)
 
         progress_bar = tqdm(test_loader, desc=dataset_setname,ncols=140)
@@ -82,7 +82,7 @@ def save_p(size,outputs,image_w,image_h,image_path,dataset_setname,save_path):
 
 def testing(args):
     print('Starting test.')
-    model = M3Net(embed_dim=384,dim=96,img_size=224,method=args.method)
+    model = M3Net(embed_dim=512,dim=128,img_size=384,method=args.method)
     model.cuda()
     model.load_state_dict(torch.load(args.save_model+args.method+'.pth'))
     print('Loaded from '+args.save_model+args.method+'.pth.')

@@ -1,9 +1,11 @@
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
-from M3Net import M3Net
+from xxSOD import M3Net
 from dataloader import get_loader
 import os
+from torch.optim.lr_scheduler import _LRScheduler
+
 # IoU Loss
 def iou_loss(pred, mask):
     pred  = torch.sigmoid(pred)
@@ -38,14 +40,15 @@ def wbce(pred,mask):
     wbce = (weit * wbce).sum(dim=(2, 3)) / weit.sum(dim=(2, 3))
     return wbce.mean()
 
-def train_one_epoch(epoch,epochs,model,opt,train_dl):
+def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl):
     epoch_total_loss = 0
+    epoch_loss0 = 0
     epoch_loss1 = 0
     epoch_loss2 = 0
     epoch_loss3 = 0
     epoch_loss4 = 0
 
-    loss_weights = [1, 0.8, 0.5, 0.5, 0.5]
+    loss_weights = [1, 1, 1, 1, 1]
     l = 0
 
     progress_bar = tqdm(train_dl, desc='Epoch[{:03d}/{:03d}]'.format(epoch+1, epochs),ncols=140)
@@ -53,48 +56,47 @@ def train_one_epoch(epoch,epochs,model,opt,train_dl):
 
         l = l+1
 
-        images, label, label_1_16, label_1_8, label_1_4 = data_batch
+        images, label, label_1_16, label_1_8, label_1_4, label_1_2 = data_batch
         images, label = images.cuda(non_blocking=True), label.cuda(non_blocking=True)
-        label_1_16, label_1_8, label_1_4 = label_1_16.cuda(), label_1_8.cuda(), label_1_4.cuda()
+        label_1_16, label_1_8, label_1_4, label_1_2 = label_1_16.cuda(), label_1_8.cuda(), label_1_4.cuda(), label_1_2.cuda()
 
-        out2, out3, out4, out5 = model(images)
+        mask_1_8, mask_1_4, mask_1_2, mask_1_1 = model(images)
         
-        loss4  = F.binary_cross_entropy_with_logits(out2, label_1_16) + iou_loss(out2, label_1_16)
-        loss3  = F.binary_cross_entropy_with_logits(out3, label_1_8) + iou_loss(out3, label_1_8)
-        loss2  = F.binary_cross_entropy_with_logits(out4, label_1_4) + iou_loss(out4, label_1_4)
-        loss1  = F.binary_cross_entropy_with_logits(out5, label) + iou_loss(out5, label)
+        #loss4  = F.binary_cross_entropy_with_logits(mask_1_16, label_1_16) + iou_loss(mask_1_16, label_1_16)
+        loss3  = wbce(mask_1_8, label_1_8) + iou_loss(mask_1_8, label_1_8)
+        loss2  = wbce(mask_1_4, label_1_4) + iou_loss(mask_1_4, label_1_4)
+        loss1  = wbce(mask_1_2, label_1_2) + iou_loss(mask_1_2, label_1_2)
+        loss0  = wbce(mask_1_1, label) + iou_loss(mask_1_1, label)
 
-        loss = loss_weights[0] * loss1 + loss_weights[1] * loss2 + loss_weights[2] * loss3 + loss_weights[3] * loss4
+        loss = loss_weights[0] * loss0 + loss_weights[0] * loss1 + loss_weights[1] * loss2 + loss_weights[2] * loss3 #+ loss_weights[3] * loss4
 
         opt.zero_grad()
         loss.backward()
         opt.step()
-
+        scheduler.step()
         epoch_total_loss += loss.cpu().data.item()
+        epoch_loss0 += loss0.cpu().data.item()
         epoch_loss1 += loss1.cpu().data.item()
         epoch_loss2 += loss2.cpu().data.item()
         epoch_loss3 += loss3.cpu().data.item()
-        epoch_loss4 += loss4.cpu().data.item()
+        #epoch_loss4 += loss4.cpu().data.item()
 
-        progress_bar.set_postfix(loss=f'{epoch_loss1/(i+1):.3f}')
+        progress_bar.set_postfix(loss=f'{epoch_loss0/(i+1):.3f}')
     return epoch_loss1/l
         
-def fit(model, train_dl, epochs=[100,20], lr=1e-4):
-    step = len(epochs)
+def fit(model, train_dl, epochs=60, lr=1e-4):
     save_dir = './loss.txt'
-    for st in range(step):
-        opt = get_opt(lr,model)
-        print('Starting train step {}.'.format(st+1))
-        print('lr: '+str(lr))
-        for epoch in range(epochs[st]):
-            #model.train()
-            loss = train_one_epoch(epoch,epochs[st],model,opt,train_dl)
-            fh = open(save_dir, 'a')
-            if(epoch == 0):
-                fh.write('Step: ' + str(st+1) + ', current lr: ' + str(lr) + '\n')
-            fh.write(str(epoch+1) + ' epoch_loss: ' + str(loss) + '\n')
-            fh.close()
-        lr = lr/5
+    opt = get_opt(lr,model)
+    scheduler = PolyLr(opt,gamma=0.9,minimum_lr=1.0e-07,max_iteration=len(train_dl)*epochs,warmup_iteration=12000)
+
+    print('Starting train.')
+    print('lr: '+str(lr))
+    for epoch in range(epochs):
+        #model.train()
+        loss = train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl)
+        fh = open(save_dir, 'a')
+        fh.write(str(epoch+1) + ' epoch_loss: ' + str(loss) + '\n')
+        fh.close()
 
 def get_opt(lr,model):
     
@@ -104,31 +106,53 @@ def get_opt(lr,model):
           {'params': other_params, 'lr': lr}
          ]
          
-    opt = torch.optim.Adam(params, lr)
+    opt = torch.optim.Adam(params=params, lr=lr,weight_decay=0.0)
 
     return opt
 
+class PolyLr(_LRScheduler):
+    def __init__(self, optimizer, gamma, max_iteration, minimum_lr=0, warmup_iteration=0, last_epoch=-1):
+        self.gamma = gamma
+        self.max_iteration = max_iteration
+        self.minimum_lr = minimum_lr
+        self.warmup_iteration = warmup_iteration
+        
+        self.last_epoch = None
+        self.base_lrs = []
+
+        super(PolyLr, self).__init__(optimizer, last_epoch)
+
+    def poly_lr(self, base_lr, step):
+        return (base_lr - self.minimum_lr) * ((1 - (step / self.max_iteration)) ** self.gamma) + self.minimum_lr
+
+    def warmup_lr(self, base_lr, alpha):
+        return base_lr * (1 / 10.0 * (1 - alpha) + alpha)
+
+    def get_lr(self):
+        if self.last_epoch < self.warmup_iteration:
+            alpha = self.last_epoch / self.warmup_iteration
+            lrs = [min(self.warmup_lr(base_lr, alpha), self.poly_lr(base_lr, self.last_epoch)) for base_lr in
+                    self.base_lrs]
+        else:
+            lrs = [self.poly_lr(base_lr, self.last_epoch) for base_lr in self.base_lrs]
+
+        return lrs
+    
 def training(args):
-    if args.method == 'M3Net-S':
-        model = M3Net(embed_dim=384,dim=96,img_size=224,method=args.method)
-        model.encoder.load_state_dict(torch.load('./pretrained_model/swin_small_patch4_window7_224.pth')['model'])
-    elif args.method == 'M3Net-R':
-        model = M3Net(embed_dim=384,dim=96,img_size=224,method=args.method)
-        model.encoder.load_state_dict(torch.load('./pretrained_model/ResNet50.pth'))
-    elif args.method == 'M3Net-T':
-        model = M3Net(embed_dim=384,dim=64,img_size=224,method=args.method)
-        model.encoder.load_state_dict(torch.load('/pretrained_model/T2T_ViTt_14.pth.tar')['state_dict_ema'])
+    model = M3Net(embed_dim=512,dim=128,img_size=384,method=args.method)
+    model.encoder.load_state_dict(torch.load('/home/yy/workspace/pretrained_model/swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
+
     print('Pre-trained weight loaded.')
 
-    train_dataset = get_loader(args.trainset, args.data_root, 224, mode='train')
+    train_dataset = get_loader(args.trainset, args.data_root, 384, mode='train')
     train_dl = torch.utils.data.DataLoader(train_dataset, batch_size=8, shuffle = True, 
-                                               pin_memory=True,num_workers = 2
+                                               pin_memory=True,num_workers = 4
                                                )
     
     model.cuda()
     model.train()
     print('Starting train.')
-    fit(model,train_dl,[args.step1epochs,args.step2epochs],args.lr)
+    fit(model,train_dl,args.train_epochs,args.lr)
     if not os.path.exists(args.save_model):
         os.makedirs(args.save_model)
     torch.save(model.state_dict(), args.save_model+args.method+'.pth')

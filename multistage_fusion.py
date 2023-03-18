@@ -1,7 +1,21 @@
 import torch
 import torch.nn as nn
 from timm.models.layers import DropPath
-from Models.modules import MixedAttentionBlock
+from Models.modules import MixedAttentionBlock,Conv2d
+import torch.nn.functional as F
+from Models.layers import *
+from Models.context_module import *
+from Models.attention_module import *
+from Models.decoder_module import *
+
+class InSPyReNet(nn.Module):
+    def __init__(self, backbone, in_channels, depth=64, base_size=[384, 384], threshold=512, **kwargs):
+        super(InSPyReNet, self).__init__()
+
+
+        
+
+    
 class decoder(nn.Module):
     r""" Multistage decoder. 
     
@@ -11,43 +25,89 @@ class decoder(nn.Module):
         img_size (int): Input image size. Default 224
         mlp_ratio (float): Ratio of mlp hidden dim to embedding dim.
     """
-    def __init__(self,embed_dim=384,dims=[96,192,384],img_size=224,mlp_ratio=3):
+    def __init__(self,in_channels = [128,128,256,512,1024],depth=64, base_size=[384, 384], threshold=512, **kwargs):
         super(decoder, self).__init__()
-        self.img_size = img_size
-        #self.dim = dim
-        self.embed_dim = embed_dim
-        self.fusion1 = multiscale_fusion(in_dim=dims[2],f_dim=dims[1],kernel_size=(3,3),img_size=(img_size//8,img_size//8),stride=(2,2),padding=(1,1))
-        self.fusion2 = multiscale_fusion(in_dim=dims[1],f_dim=dims[0],kernel_size=(3,3),img_size=(img_size//4,img_size//4),stride=(2,2),padding=(1,1))
-        self.fusion3 = multiscale_fusion(in_dim=dims[0],f_dim=dims[0],kernel_size=(7,7),img_size=(img_size//1,img_size//1),stride=(4,4),padding=(2,2),fuse=False)
+        #self.backbone = backbone
+        self.in_channels = in_channels
+        self.depth = depth
+        self.base_size = base_size
+        self.threshold = threshold
+        
+        self.context1 = PAA_e(self.in_channels[0], self.depth, base_size=self.base_size, stage=0)
+        self.context2 = PAA_e(self.in_channels[1], self.depth, base_size=self.base_size, stage=1)
+        self.context3 = PAA_e(self.in_channels[2], self.depth, base_size=self.base_size, stage=2)
+        self.context4 = PAA_e(self.in_channels[3], self.depth, base_size=self.base_size, stage=3)
+        self.context5 = PAA_e(self.in_channels[4], self.depth, base_size=self.base_size, stage=4)
 
-        self.mixatt1 = MixedAttention(in_dim=dims[1],dim=embed_dim,img_size=(img_size//8,img_size//8),num_heads=1,mlp_ratio=mlp_ratio,depth=2)
-        self.mixatt2 = MixedAttention(in_dim=dims[0],dim=embed_dim,img_size=(img_size//4,img_size//4),num_heads=1,mlp_ratio=mlp_ratio,depth=2)
+        self.decoder = PAA_d(self.depth * 3, depth=self.depth, base_size=base_size, stage=2)
 
-        self.proj1 = nn.Linear(dims[2],1)
-        self.proj2 = nn.Linear(dims[1],1)
-        self.proj3 = nn.Linear(dims[0],1)
-        self.proj4 = nn.Linear(dims[0],1)
+        self.attention0 = SICA(self.depth    , depth=self.depth, base_size=self.base_size, stage=0, lmap_in=True)
+        self.attention1 = SICA(self.depth * 2, depth=self.depth, base_size=self.base_size, stage=1, lmap_in=True)
+        self.attention2 = SICA(self.depth * 2, depth=self.depth, base_size=self.base_size, stage=2              )
+
+        self.pc_loss_fn  = nn.L1Loss()
+
+
+        
+        
+        self.transition0 = Transition(17)
+        self.transition1 = Transition(9)
+        self.transition2 = Transition(5)
+        
+        self.ret = lambda x, target: F.interpolate(x, size=target.shape[-2:], mode='bilinear', align_corners=False)
+        self.res = lambda x, size: F.interpolate(x, size=size, mode='bilinear', align_corners=False)
+        self.des = lambda x, size: F.interpolate(x, size=size, mode='nearest')
+        self.image_pyramid = ImagePyramid(7, 1)
 
 
 
-    def forward(self,f):
-        fea_1_16,fea_1_8,fea_1_4 = f #fea_1_16:1/16
-        B,_,_ = fea_1_16.shape
-        fea_1_8 = self.fusion1(fea_1_16,fea_1_8)
-        fea_1_8 = self.mixatt1(fea_1_8)
-        fea_1_4 = self.fusion2(fea_1_8,fea_1_4)
-        fea_1_4 = self.mixatt2(fea_1_4)
-        fea_1_1 = self.fusion3(fea_1_4)
-        fea_1_16 = self.proj1(fea_1_16)
-        mask_1_16 = fea_1_16.transpose(1, 2).reshape(B, 1, self.img_size // 16, self.img_size // 16)
-        fea_1_8 = self.proj2(fea_1_8)
-        mask_1_8 = fea_1_8.transpose(1, 2).reshape(B, 1, self.img_size // 8, self.img_size // 8)
-        fea_1_4 = self.proj3(fea_1_4)
-        mask_1_4 = fea_1_4.transpose(1, 2).reshape(B, 1, self.img_size // 4, self.img_size // 4)
-        fea_1_1 = self.proj4(fea_1_1)
-        mask_1_1 = fea_1_1.transpose(1, 2).reshape(B, 1, self.img_size // 1, self.img_size // 1)
-        return [mask_1_16,mask_1_8,mask_1_4,mask_1_1]
+    def to(self, device):
+        self.image_pyramid.to(device)
+        #self.transition0.to(device)
+        #self.transition1.to(device)
+        #self.transition2.to(device)
+        super(decoder, self).to(device)
+        return self
     
+    def cuda(self, idx=None):
+        if idx is None:
+            idx = torch.cuda.current_device()
+            
+        self.to(device="cuda:{}".format(idx))
+        return self
+    
+
+    
+    def forward(self, x):
+        H, W = self.base_size
+    
+        x5,x4,x3,x2,x1 = x
+        
+        x1 = self.context1(x1) #4
+        x2 = self.context2(x2) #4
+        x3 = self.context3(x3) #8
+        x4 = self.context4(x4) #16
+        x5 = self.context5(x5) #32
+
+        f3, d3 = self.decoder([x3, x4, x5]) #16
+
+        f3 = self.res(f3, (H // 4,  W // 4 ))
+        f2, p2 = self.attention2(torch.cat([x2, f3], dim=1), d3.detach())
+        d2 = self.image_pyramid.reconstruct(d3.detach(), p2) #4
+
+        x1 = self.res(x1, (H // 2, W // 2))
+        f2 = self.res(f2, (H // 2, W // 2))
+        f1, p1 = self.attention1(torch.cat([x1, f2], dim=1), d2.detach(), p2.detach()) #2
+        d1 = self.image_pyramid.reconstruct(d2.detach(), p1) #2
+        
+        f1 = self.res(f1, (H, W))
+        _, p0 = self.attention0(f1, d1.detach(), p1.detach()) #2
+        d0 = self.image_pyramid.reconstruct(d1.detach(), p0) #2
+        
+        out = [d3,d2,d1,d0]
+        
+
+        return out
     def flops(self):
         flops = 0
         flops += self.fusion1.flops()
