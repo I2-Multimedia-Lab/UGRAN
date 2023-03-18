@@ -8,14 +8,6 @@ from Models.context_module import *
 from Models.attention_module import *
 from Models.decoder_module import *
 
-class InSPyReNet(nn.Module):
-    def __init__(self, backbone, in_channels, depth=64, base_size=[384, 384], threshold=512, **kwargs):
-        super(InSPyReNet, self).__init__()
-
-
-        
-
-    
 class decoder(nn.Module):
     r""" Multistage decoder. 
     
@@ -45,11 +37,8 @@ class decoder(nn.Module):
         self.attention1 = SICA(self.depth * 2, depth=self.depth, base_size=self.base_size, stage=1, lmap_in=True)
         self.attention2 = SICA(self.depth * 2, depth=self.depth, base_size=self.base_size, stage=2              )
 
-        self.pc_loss_fn  = nn.L1Loss()
+        #self.pc_loss_fn  = nn.L1Loss()
 
-
-        
-        
         self.transition0 = Transition(17)
         self.transition1 = Transition(9)
         self.transition2 = Transition(5)
@@ -58,8 +47,6 @@ class decoder(nn.Module):
         self.res = lambda x, size: F.interpolate(x, size=size, mode='bilinear', align_corners=False)
         self.des = lambda x, size: F.interpolate(x, size=size, mode='nearest')
         self.image_pyramid = ImagePyramid(7, 1)
-
-
 
     def to(self, device):
         self.image_pyramid.to(device)
