@@ -3,9 +3,10 @@ import torch.nn.functional as F
 from tqdm import tqdm
 from xxSOD import M3Net
 from dataloader import get_loader
+from data.dataloader import RGB_Dataset
 import os
 from torch.optim.lr_scheduler import _LRScheduler
-
+from Models.layers import ImagePyramid
 # IoU Loss
 def iou_loss(pred, mask):
     pred  = torch.sigmoid(pred)
@@ -47,7 +48,7 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl):
     epoch_loss2 = 0
     epoch_loss3 = 0
     epoch_loss4 = 0
-
+    imagepyramid = ImagePyramid(7,1)
     loss_weights = [1, 1, 1, 1, 1]
     l = 0
 
@@ -56,9 +57,14 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl):
 
         l = l+1
 
-        images, label, label_1_16, label_1_8, label_1_4, label_1_2 = data_batch
+        images = data_batch['image']
+        label = data_batch['gt']
+        H,W = [384,384]
         images, label = images.cuda(non_blocking=True), label.cuda(non_blocking=True)
-        label_1_16, label_1_8, label_1_4, label_1_2 = label_1_16.cuda(), label_1_8.cuda(), label_1_4.cuda(), label_1_2.cuda()
+
+        label_1_2 = F.interpolate(label, (H//2,W//2), mode='nearest')
+        label_1_4 = F.interpolate(label, (H//4,W//4), mode='nearest')
+        label_1_8 = F.interpolate(label, (H//8,W//8), mode='nearest')
 
         mask_1_8, mask_1_4, mask_1_2, mask_1_1 = model(images)
         
@@ -140,12 +146,13 @@ class PolyLr(_LRScheduler):
     
 def training(args):
     model = M3Net(embed_dim=512,dim=128,img_size=384,method=args.method)
-    model.encoder.load_state_dict(torch.load('/home/yy/workspace/pretrained_model/swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
+    model.encoder.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
 
     print('Pre-trained weight loaded.')
 
-    train_dataset = get_loader(args.trainset, args.data_root, 384, mode='train')
-    train_dl = torch.utils.data.DataLoader(train_dataset, batch_size=8, shuffle = True, 
+    #train_dataset = get_loader(args.trainset, args.data_root, 384, mode='train')
+    train_dataset = RGB_Dataset(root=args.data_root, sets=['DUTS-TR'],mode='train')
+    train_dl = torch.utils.data.DataLoader(train_dataset, batch_size=4, shuffle = True, 
                                                pin_memory=True,num_workers = 4
                                                )
     

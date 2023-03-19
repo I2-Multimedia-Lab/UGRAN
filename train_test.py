@@ -7,7 +7,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     # train
     parser.add_argument('--train', default=False, type=bool, help='Train or not')
-    parser.add_argument('--data_root', default='/home/yy/workspace/datasets/', type=str, help='data path')
+    parser.add_argument('--data_root', default='/mnt/ssd/yy/datasets/', type=str, help='data path')
     parser.add_argument('--train_epochs', default=60, type=int, help='total training epochs')
     parser.add_argument('--img_size', default=224, type=int, help='network input size')
     parser.add_argument('--method', default='M3Net-S', type=str, help='M3Net with different backbone')

@@ -32,11 +32,12 @@ class ImagePyramid:
         return self
 
     def expand(self, x):
-        z = torch.zeros_like(x)
-        x = torch.cat([x, z, z, z], dim=1)
-        x = F.pixel_shuffle(x, 2)
-        x = F.pad(x, (self.ksize // 2, ) * 4, mode='reflect')
-        x = F.conv2d(x, self.kernel * 4, groups=self.channels)
+        #z = torch.zeros_like(x)
+        #x = torch.cat([x, z, z, z], dim=1)
+        #x = F.pixel_shuffle(x, 2)
+        #x = F.pad(x, (self.ksize // 2, ) * 4, mode='reflect')
+        #x = F.conv2d(x, self.kernel * 4, groups=self.channels)
+        x = F.interpolate(x,scale_factor=2,mode='bilinear')
         return x
 
     def reduce(self, x):
@@ -56,7 +57,7 @@ class ImagePyramid:
         return reduced_x, laplacian_x
 
     def reconstruct(self, x, laplacian_x):
-        expanded_x = self.expand(x)
+        #expanded_x = self.expand(x)
         #xx = expanded_x.detach().cpu().squeeze(0).squeeze(0)
         #xx = xx-xx.min()
         #xx = xx/xx.max()*255
