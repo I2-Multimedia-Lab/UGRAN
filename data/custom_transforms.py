@@ -1,4 +1,3 @@
-from email.mime import base
 import numpy as np
 from PIL import Image
 import os

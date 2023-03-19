@@ -41,6 +41,24 @@ def wbce(pred,mask):
     wbce = (weit * wbce).sum(dim=(2, 3)) / weit.sum(dim=(2, 3))
     return wbce.mean()
 
+def adaptive_pixel_intensity_loss(pred, mask):
+    w1 = torch.abs(F.avg_pool2d(mask, kernel_size=3, stride=1, padding=1) - mask)
+    w2 = torch.abs(F.avg_pool2d(mask, kernel_size=15, stride=1, padding=7) - mask)
+    w3 = torch.abs(F.avg_pool2d(mask, kernel_size=31, stride=1, padding=15) - mask)
+
+    omega = 1 + 0.5 * (w1 + w2 + w3) * mask
+
+    bce = F.binary_cross_entropy(pred, mask, reduce=None)
+    abce = (omega * bce).sum(dim=(2, 3)) / (omega + 0.5).sum(dim=(2, 3))
+
+    inter = ((pred * mask) * omega).sum(dim=(2, 3))
+    union = ((pred + mask) * omega).sum(dim=(2, 3))
+    aiou = 1 - (inter + 1) / (union - inter + 1)
+
+    mae = F.l1_loss(pred, mask, reduce=None)
+    amae = (omega * mae).sum(dim=(2, 3)) / (omega - 1).sum(dim=(2, 3))
+
+    return (0.7 * abce + 0.7 * aiou + 0.7 * amae).mean()
 def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl):
     epoch_total_loss = 0
     epoch_loss0 = 0
@@ -91,6 +109,7 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl):
     return epoch_loss1/l
         
 def fit(model, train_dl, epochs=60, lr=1e-4):
+    epochs=120
     save_dir = './loss.txt'
     opt = get_opt(lr,model)
     scheduler = PolyLr(opt,gamma=0.9,minimum_lr=1.0e-07,max_iteration=len(train_dl)*epochs,warmup_iteration=12000)
@@ -103,6 +122,12 @@ def fit(model, train_dl, epochs=60, lr=1e-4):
         fh = open(save_dir, 'a')
         fh.write(str(epoch+1) + ' epoch_loss: ' + str(loss) + '\n')
         fh.close()
+        if(epoch+1 == 60):
+            torch.save(model.state_dict(),'savepth/60.pth')
+        if(epoch+1 == 80):
+            torch.save(model.state_dict(),'savepth/80.pth')
+        if(epoch+1 == 100):
+            torch.save(model.state_dict(),'savepth/100.pth')
 
 def get_opt(lr,model):
     
