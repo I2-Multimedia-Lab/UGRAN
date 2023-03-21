@@ -79,18 +79,27 @@ class decoder(nn.Module):
         f3, d3 = self.decoder([x3, x4, x5]) #16
 
         f3 = self.res(f3, (H // 4,  W // 4 ))
-        f2, p2 = self.attention2(torch.cat([x2, f3], dim=1), d3.detach())
-        d2 = self.image_pyramid.reconstruct(d3.detach(), p2) #4
+        f2, p2 = self.attention2(torch.cat([x2, f3], dim=1), d3)
+        d2 = self.image_pyramid.reconstruct(d3, p2) #4
 
         x1 = self.res(x1, (H // 2, W // 2))
         f2 = self.res(f2, (H // 2, W // 2))
-        f1, p1 = self.attention1(torch.cat([x1, f2], dim=1), d2.detach(), p2.detach()) #2
-        d1 = self.image_pyramid.reconstruct(d2.detach(), p1) #2
+        f1, p1 = self.attention1(torch.cat([x1, f2], dim=1), d2, p2) #2
+        d1 = self.image_pyramid.reconstruct(d2, p1) #2
         
         f1 = self.res(f1, (H, W))
-        _, p0 = self.attention0(f1, d1.detach(), p1.detach()) #2
-        d0 = self.image_pyramid.reconstruct(d1.detach(), p0) #2
-        
+        _, p0 = self.attention0(f1, d1, p1) #2
+        d0 = self.image_pyramid.reconstruct(d1, p0) #2
+        '''
+        xx = p0.detach().cpu().squeeze()
+        xx = xx-xx.min()
+        xx = xx/xx.max()*255
+        cv2.imwrite('1.png',np.asarray(xx))
+        xx = d0.detach().cpu().squeeze()
+        xx = xx-xx.min()
+        xx = xx/xx.max()*255
+        cv2.imwrite('2.png',np.asarray(xx))
+        '''        
         out = [d3,d2,d1,d0]
         
 

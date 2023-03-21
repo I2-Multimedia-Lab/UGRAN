@@ -57,21 +57,13 @@ class ImagePyramid:
         return reduced_x, laplacian_x
 
     def reconstruct(self, x, laplacian_x):
-        #expanded_x = self.expand(x)
-        #xx = expanded_x.detach().cpu().squeeze(0).squeeze(0)
-        #xx = xx-xx.min()
-        #xx = xx/xx.max()*255
-        #print(xx)
-        #cv2.imwrite('1.png',np.asarray(xx))
-        #if laplacian_x.shape != expanded_x:
-        #    laplacian_x = F.interpolate(laplacian_x, expanded_x.shape[-2:], mode='bilinear', align_corners=True)
-        #xx = laplacian_x.detach().cpu().squeeze(0).squeeze(0)
-        #xx = xx-xx.min()
-        #xx = xx/xx.max()*255
-        #print(xx)
-        #cv2.imwrite('2.png',np.asarray(xx))
+        expanded_x = self.expand(x)
 
-        return laplacian_x
+        if laplacian_x.shape != expanded_x.shape:
+            laplacian_x = F.interpolate(laplacian_x, expanded_x.shape[-2:], mode='bilinear', align_corners=True)
+
+
+        return expanded_x+laplacian_x
 
 class Transition:
     def __init__(self, k=3):

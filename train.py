@@ -80,16 +80,18 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl):
         H,W = [384,384]
         images, label = images.cuda(non_blocking=True), label.cuda(non_blocking=True)
 
-        label_1_2 = F.interpolate(label, (H//2,W//2), mode='nearest')
-        label_1_4 = F.interpolate(label, (H//4,W//4), mode='nearest')
-        label_1_8 = F.interpolate(label, (H//8,W//8), mode='nearest')
+        #label = F.interpolate(label, (H//2,W//2), mode='nearest')
+        #label = F.interpolate(label, (H//4,W//4), mode='nearest')
+        #label = F.interpolate(label, (H//8,W//8), mode='nearest')
 
         mask_1_8, mask_1_4, mask_1_2, mask_1_1 = model(images)
-        
+        mask_1_8 = F.interpolate(mask_1_8,(H,W),mode='bilinear')
+        mask_1_4 = F.interpolate(mask_1_4,(H,W),mode='bilinear')
+        mask_1_2 = F.interpolate(mask_1_2,(H,W),mode='bilinear')
         #loss4  = F.binary_cross_entropy_with_logits(mask_1_16, label_1_16) + iou_loss(mask_1_16, label_1_16)
-        loss3  = wbce(mask_1_8, label_1_8) + iou_loss(mask_1_8, label_1_8)
-        loss2  = wbce(mask_1_4, label_1_4) + iou_loss(mask_1_4, label_1_4)
-        loss1  = wbce(mask_1_2, label_1_2) + iou_loss(mask_1_2, label_1_2)
+        loss3  = wbce(mask_1_8, label) + iou_loss(mask_1_8, label)
+        loss2  = wbce(mask_1_4, label) + iou_loss(mask_1_4, label)
+        loss1  = wbce(mask_1_2, label) + iou_loss(mask_1_2, label)
         loss0  = wbce(mask_1_1, label) + iou_loss(mask_1_1, label)
 
         loss = loss_weights[0] * loss0 + loss_weights[0] * loss1 + loss_weights[1] * loss2 + loss_weights[2] * loss3 #+ loss_weights[3] * loss4
@@ -109,7 +111,6 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl):
     return epoch_loss1/l
         
 def fit(model, train_dl, epochs=60, lr=1e-4):
-    epochs=120
     save_dir = './loss.txt'
     opt = get_opt(lr,model)
     scheduler = PolyLr(opt,gamma=0.9,minimum_lr=1.0e-07,max_iteration=len(train_dl)*epochs,warmup_iteration=12000)

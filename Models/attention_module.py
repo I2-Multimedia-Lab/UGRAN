@@ -32,7 +32,7 @@ class SICA(nn.Module):
             self.ctx = 3
 
         self.conv_out1 = Conv2d(depth, depth, 3, relu=True)
-        self.conv_out2 = Conv2d(in_channel, depth, 3, relu=True)
+        self.conv_out2 = Conv2d(in_channel+depth, depth, 3, relu=True)
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         self.conv_out4 = Conv2d(depth, out_channel, 1)
 
@@ -44,7 +44,7 @@ class SICA(nn.Module):
     def forward(self, x, smap, lmap: Optional[torch.Tensor]=None):
         assert not xor(self.lmap_in is True, lmap is not None)
         b, c, h, w = x.shape
-        '''
+        
         # compute class probability
         smap = F.interpolate(smap, size=x.shape[-2:], mode='bilinear', align_corners=False)
         smap = torch.sigmoid(smap)
@@ -94,8 +94,8 @@ class SICA(nn.Module):
         # compute refined feature
         context = torch.bmm(sim, value).permute(0, 2, 1).contiguous().view(b, -1, h, w)
         context = self.conv_out1(context)
-        '''
-        #x = torch.cat([x, context], dim=1)
+        
+        x = torch.cat([x, context], dim=1)
         x = self.conv_out2(x)
         x = self.conv_out3(x)
         out = self.conv_out4(x)
