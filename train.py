@@ -59,7 +59,7 @@ def adaptive_pixel_intensity_loss(pred, mask):
     amae = (omega * mae).sum(dim=(2, 3)) / (omega - 1).sum(dim=(2, 3))
 
     return (0.7 * abce + 0.7 * aiou + 0.7 * amae).mean()
-def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl):
+def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,train_size):
     epoch_total_loss = 0
     epoch_loss0 = 0
     epoch_loss1 = 0
@@ -77,7 +77,7 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl):
 
         images = data_batch['image']
         label = data_batch['gt']
-        H,W = [384,384]
+        H,W = train_size
         images, label = images.cuda(non_blocking=True), label.cuda(non_blocking=True)
 
         #label = F.interpolate(label, (H//2,W//2), mode='nearest')
@@ -110,7 +110,7 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl):
         progress_bar.set_postfix(loss=f'{epoch_loss0/(i+1):.3f}')
     return epoch_loss1/l
         
-def fit(model, train_dl, epochs=60, lr=1e-4):
+def fit(model, train_dl, epochs=60, lr=1e-4,train_size = 384):
     save_dir = './loss.txt'
     opt = get_opt(lr,model)
     scheduler = PolyLr(opt,gamma=0.9,minimum_lr=1.0e-07,max_iteration=len(train_dl)*epochs,warmup_iteration=12000)
@@ -119,16 +119,11 @@ def fit(model, train_dl, epochs=60, lr=1e-4):
     print('lr: '+str(lr))
     for epoch in range(epochs):
         #model.train()
-        loss = train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl)
+        loss = train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,[train_size,train_size])
         fh = open(save_dir, 'a')
         fh.write(str(epoch+1) + ' epoch_loss: ' + str(loss) + '\n')
         fh.close()
-        if(epoch+1 == 60):
-            torch.save(model.state_dict(),'savepth/60.pth')
-        if(epoch+1 == 80):
-            torch.save(model.state_dict(),'savepth/80.pth')
-        if(epoch+1 == 100):
-            torch.save(model.state_dict(),'savepth/100.pth')
+
 
 def get_opt(lr,model):
     
@@ -171,13 +166,13 @@ class PolyLr(_LRScheduler):
         return lrs
     
 def training(args):
-    model = M3Net(embed_dim=512,dim=128,img_size=384,method=args.method)
+    model = M3Net(embed_dim=512,dim=128,img_size=args.img_size,method=args.method)
     model.encoder.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
 
     print('Pre-trained weight loaded.')
 
     #train_dataset = get_loader(args.trainset, args.data_root, 384, mode='train')
-    train_dataset = RGB_Dataset(root=args.data_root, sets=['DUTS-TR'],mode='train')
+    train_dataset = RGB_Dataset(root=args.data_root, sets=['DUTS-TR'],img_size=args.img_size,mode='train')
     train_dl = torch.utils.data.DataLoader(train_dataset, batch_size=4, shuffle = True, 
                                                pin_memory=True,num_workers = 4
                                                )
@@ -185,7 +180,7 @@ def training(args):
     model.cuda()
     model.train()
     print('Starting train.')
-    fit(model,train_dl,args.train_epochs,args.lr)
+    fit(model,train_dl,args.train_epochs,args.lr,args.img_size)
     if not os.path.exists(args.save_model):
         os.makedirs(args.save_model)
     torch.save(model.state_dict(), args.save_model+args.method+'.pth')

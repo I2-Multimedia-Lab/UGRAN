@@ -91,15 +91,15 @@ class decoder(nn.Module):
         _, p0 = self.attention0(f1, d1, p1) #2
         d0 = self.image_pyramid.reconstruct(d1, p0) #2
         '''
-        xx = p0.detach().cpu().squeeze()
+        xx = p1.detach().cpu().squeeze()
         xx = xx-xx.min()
         xx = xx/xx.max()*255
         cv2.imwrite('1.png',np.asarray(xx))
-        xx = d0.detach().cpu().squeeze()
+        xx = d1.detach().cpu().squeeze()
         xx = xx-xx.min()
         xx = xx/xx.max()*255
         cv2.imwrite('2.png',np.asarray(xx))
-        '''        
+        ''' 
         out = [d3,d2,d1,d0]
         
 

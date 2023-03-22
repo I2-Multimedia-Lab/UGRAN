@@ -28,7 +28,7 @@ class M3Net(nn.Module):
                                         window_size=12)
 
         #feature_dims=[dim,dim*2,dim*4,dim*8]
-        self.decoder = decoder()
+        self.decoder = decoder(base_size=[img_size,img_size])
 
     def forward(self,x):
         fea = self.encoder(x)
@@ -68,8 +68,8 @@ class M3Net(nn.Module):
 #from thop import profile
 if __name__ == '__main__':
     # Test
-    model = M3Net(embed_dim=512,dim=128,img_size=384,method='M3Net-S')
-    model.encoder.load_state_dict(torch.load('/home/yy/workspace/pretrained_model/swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
+    model = M3Net(embed_dim=384,dim=96,img_size=224,method='M3Net-S')
+    model.encoder.load_state_dict(torch.load('/home/yy/workspace/pretrained_model/swin_base_patch4_window7_224_22k.pth', map_location='cpu')['model'], strict=False)
     model.cuda()
     
     f = torch.randn((1,3,224,224))

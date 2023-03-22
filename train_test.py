@@ -9,7 +9,7 @@ if __name__ == "__main__":
     parser.add_argument('--train', default=False, type=bool, help='Train or not')
     parser.add_argument('--data_root', default='/mnt/ssd/yy/datasets/', type=str, help='data path')
     parser.add_argument('--train_epochs', default=60, type=int, help='total training epochs')
-    parser.add_argument('--img_size', default=384, type=int, help='network input size')
+    parser.add_argument('--img_size', default=224, type=int, help='network input size')
     parser.add_argument('--method', default='M3Net-S', type=str, help='M3Net with different backbone')
     parser.add_argument('--pretrained_model', default='./pretrained_model/80.7_T2T_ViT_t_14.pth.tar', type=str, help='load Pretrained model')
     parser.add_argument('--lr', default=1e-4, type=int, help='learning rate')

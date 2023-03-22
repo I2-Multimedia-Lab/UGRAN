@@ -86,7 +86,7 @@ def save_p(size,outputs,image_w,image_h,image_path,dataset_setname,save_path):
 '''
 def testing(args):
     print('Starting test.')
-    model = M3Net(embed_dim=512,dim=128,img_size=384,method=args.method)
+    model = M3Net(embed_dim=512,dim=128,img_size=args.img_size,method=args.method)
     model.cuda()
     model.load_state_dict(torch.load(args.save_model+args.method+'.pth'))
     print('Loaded from '+args.save_model+args.method+'.pth.')
