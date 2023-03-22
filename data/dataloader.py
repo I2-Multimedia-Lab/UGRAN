@@ -30,7 +30,7 @@ def get_transform(img_size=384,mode = 'train'):
         comp.append(normalize(mean= [0.485, 0.456, 0.406] ,std= [0.229, 0.224, 0.225]))
         comp.append(totensor())
     else:
-        comp.append(static_resize(size = [384,384]))
+        comp.append(static_resize(size = [img_size,img_size]))
         comp.append(tonumpy())
         comp.append(normalize(mean= [0.485, 0.456, 0.406] ,std= [0.229, 0.224, 0.225]))
         comp.append(totensor())

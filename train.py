@@ -115,7 +115,6 @@ def fit(model, train_dl, epochs=60, lr=1e-4,train_size = 384):
     opt = get_opt(lr,model)
     scheduler = PolyLr(opt,gamma=0.9,minimum_lr=1.0e-07,max_iteration=len(train_dl)*epochs,warmup_iteration=12000)
 
-    print('Starting train.')
     print('lr: '+str(lr))
     for epoch in range(epochs):
         #model.train()
@@ -167,13 +166,13 @@ class PolyLr(_LRScheduler):
     
 def training(args):
     model = M3Net(embed_dim=512,dim=128,img_size=args.img_size,method=args.method)
-    model.encoder.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
+    model.encoder.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/swin_base_patch4_window7_224_22k.pth', map_location='cpu')['model'], strict=False)
 
     print('Pre-trained weight loaded.')
 
     #train_dataset = get_loader(args.trainset, args.data_root, 384, mode='train')
     train_dataset = RGB_Dataset(root=args.data_root, sets=['DUTS-TR'],img_size=args.img_size,mode='train')
-    train_dl = torch.utils.data.DataLoader(train_dataset, batch_size=4, shuffle = True, 
+    train_dl = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle = True, 
                                                pin_memory=True,num_workers = 4
                                                )
     

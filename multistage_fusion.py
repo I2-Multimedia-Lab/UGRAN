@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from timm.models.layers import DropPath
-from Models.modules import MixedAttentionBlock,Conv2d
+from Models.modules import MixedAttentionBlock
 import torch.nn.functional as F
 from Models.layers import *
 from Models.context_module import *
