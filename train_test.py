@@ -13,7 +13,7 @@ if __name__ == "__main__":
     parser.add_argument('--method', default='M3Net-S', type=str, help='M3Net with different backbone')
     parser.add_argument('--pretrained_model', default='./pretrained_model/80.7_T2T_ViT_t_14.pth.tar', type=str, help='load Pretrained model')
     parser.add_argument('--lr', default=1e-4, type=int, help='learning rate')
-    parser.add_argument('--batch_size', default=8, type=int, help='batch_size')
+    parser.add_argument('--batch_size', default=4, type=int, help='batch_size')
     #parser.add_argument('--step1epochs', default=100, type=int, help='train epochs for the step 1')
     #parser.add_argument('--step2epochs', default=20, type=int, help='train epochs for the step 2')
     parser.add_argument('--trainset', default='DUTS-TR', type=str, help='Trainging set')

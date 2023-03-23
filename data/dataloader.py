@@ -18,10 +18,10 @@ from data.custom_transforms import *
 
 Image.MAX_IMAGE_PIXELS = None
 
-def get_transform(mode = 'train'):
+def get_transform(img_size=384,mode = 'train'):
     comp = []
     if mode == 'train':
-        comp.append(static_resize(size = [384,384]))
+        comp.append(static_resize(size = [img_size,img_size]))
         comp.append(random_scale_crop(range = [0.75,1.25]))
         comp.append(random_flip(lr = True, ud = False))
         comp.append(random_rotate(range = [-10,10]))
@@ -30,14 +30,14 @@ def get_transform(mode = 'train'):
         comp.append(normalize(mean= [0.485, 0.456, 0.406] ,std= [0.229, 0.224, 0.225]))
         comp.append(totensor())
     else:
-        comp.append(static_resize(size = [384,384]))
+        comp.append(static_resize(size = [img_size,img_size]))
         comp.append(tonumpy())
         comp.append(normalize(mean= [0.485, 0.456, 0.406] ,std= [0.229, 0.224, 0.225]))
         comp.append(totensor())
     return transforms.Compose(comp)
 
 class RGB_Dataset(Dataset):
-    def __init__(self, root, sets, mode):
+    def __init__(self, root, sets, img_size, mode):
         self.images, self.gts = [], []
         
         for set in sets:
@@ -55,7 +55,7 @@ class RGB_Dataset(Dataset):
         self.filter_files()
         
         self.size = len(self.images)
-        self.transform = get_transform(mode)
+        self.transform = get_transform(img_size,mode)
         
     def __getitem__(self, index):
         image = Image.open(self.images[index]).convert('RGB')

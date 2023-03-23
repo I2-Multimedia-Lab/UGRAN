@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from timm.models.layers import DropPath
-from Models.modules import MixedAttentionBlock,Conv2d
+from Models.modules import MixedAttentionBlock
 import torch.nn.functional as F
 from Models.layers import *
 from Models.context_module import *
@@ -68,7 +68,7 @@ class decoder(nn.Module):
     def forward(self, x):
         H, W = self.base_size
     
-        x5,x4,x3,x2,x1 = x
+        x1,x2,x3,x4,x5 = x
         
         x1 = self.context1(x1) #4
         x2 = self.context2(x2) #4
@@ -91,15 +91,15 @@ class decoder(nn.Module):
         _, p0 = self.attention0(f1, d1, p1) #2
         d0 = self.image_pyramid.reconstruct(d1, p0) #2
         '''
-        xx = p0.detach().cpu().squeeze()
+        xx = p1.detach().cpu().squeeze()
         xx = xx-xx.min()
         xx = xx/xx.max()*255
         cv2.imwrite('1.png',np.asarray(xx))
-        xx = d0.detach().cpu().squeeze()
+        xx = d1.detach().cpu().squeeze()
         xx = xx-xx.min()
         xx = xx/xx.max()*255
         cv2.imwrite('2.png',np.asarray(xx))
-        '''        
+        ''' 
         out = [d3,d2,d1,d0]
         
 
