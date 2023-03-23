@@ -25,7 +25,7 @@ class M3Net(nn.Module):
                                         embed_dim=dim,
                                         depths=[2,2,18,2],
                                         num_heads=[4,8,16,32],
-                                        window_size=7)
+                                        window_size=12)
 
         #feature_dims=[dim,dim*2,dim*4,dim*8]
         self.decoder = decoder(base_size=[img_size,img_size])
