@@ -25,7 +25,7 @@ class M3Net(nn.Module):
                                         embed_dim=dim,
                                         depths=[2,2,18,2],
                                         num_heads=[4,8,16,32],
-                                        window_size=12)
+                                        window_size=7)
 
         #feature_dims=[dim,dim*2,dim*4,dim*8]
         self.decoder = decoder(base_size=[img_size,img_size])
@@ -70,6 +70,7 @@ if __name__ == '__main__':
     # Test
     model = M3Net(embed_dim=384,dim=128,img_size=384,method='M3Net-S')
     model.encoder.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
+
     model.cuda()
     
     f = torch.randn((1,3,384,384))
@@ -81,6 +82,7 @@ if __name__ == '__main__':
     from ptflops import get_model_complexity_info
 
     macs, params = get_model_complexity_info(model, (3, 384, 384), as_strings=True, print_per_layer_stat=True, verbose=True)
+
     print('{:<30}  {:<8}'.format('macs: ', macs))
     print('{:<30}  {:<8}'.format('parameters: ', params))
     
