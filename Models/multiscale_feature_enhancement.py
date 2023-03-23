@@ -4,6 +4,7 @@ import torch.nn.functional as F
 
 from .layers import *
 class MFE(nn.Module):
+    # Multilevel Feature Enhancement
     def __init__(self, in_channel, f_channel = None, out_channel = 64, base_size=None, stage=None):
         super(MFE, self).__init__()
         self.relu = nn.ReLU(True)
@@ -28,7 +29,7 @@ class MFE(nn.Module):
             self.ci = Conv2d(in_channel,in_channel,3,relu=True)
             self.si = Conv2d(in_channel,in_channel,3)
 
-        # feature enhancement
+        # diverse feature enhancement
         self.conv_asy = asyConv(in_channel,out_channel,3)
         self.conv_atr = Conv2d(in_channel,out_channel,3,dilation=2)
         self.conv_ori = Conv2d(in_channel,out_channel,3,dilation=1)

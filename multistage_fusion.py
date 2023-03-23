@@ -7,7 +7,7 @@ from Models.layers import *
 from Models.context_module import *
 from Models.attention_module import *
 from Models.decoder_module import *
-
+from Models.scale_spatial_consistent_attention import SSCA
 class decoder(nn.Module):
     r""" Multistage decoder. 
     
@@ -32,7 +32,9 @@ class decoder(nn.Module):
         self.context5 = PAA_e(self.in_channels[4], self.depth, base_size=self.base_size, stage=4)
 
         self.decoder = PAA_d(self.depth * 3, depth=self.depth, base_size=base_size, stage=2)
-
+        #self.fusion4 = SSCA(self.in_channels[4]+self.in_channels[3],dim=self.in_channels[4],depth=self.depth,stage=4)
+        #self.fusion3 = SSCA(self.in_channels[4]+self.in_channels[3],dim=self.in_channels[4],depth=self.depth,stage=3)
+        #self.proj = Conv2d(depth,1,1)
         self.attention0 = SICA(self.depth    , depth=self.depth, base_size=self.base_size, stage=0, lmap_in=True)
         self.attention1 = SICA(self.depth * 2, depth=self.depth, base_size=self.base_size, stage=1, lmap_in=True)
         self.attention2 = SICA(self.depth * 2, depth=self.depth, base_size=self.base_size, stage=2              )
@@ -76,6 +78,15 @@ class decoder(nn.Module):
         x4 = self.context4(x4) #16
         x5 = self.context5(x5) #32
 
+
+        '''
+        f5 = self.res(x5,(H//16,W//16))
+        f4 = self.fusion4(torch.cat[x4,f5],dim=1)
+        
+        f4 = self.res(f4,(H//8,W//8))
+        f3 = self.fusion3(torch.cat[x3,f4],dim=1)
+        d3 = self.proj(f3)
+        '''
         f3, d3 = self.decoder([x3, x4, x5]) #16
 
         f3 = self.res(f3, (H // 4,  W // 4 ))

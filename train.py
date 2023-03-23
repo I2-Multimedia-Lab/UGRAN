@@ -7,6 +7,7 @@ from data.dataloader import RGB_Dataset
 import os
 from torch.optim.lr_scheduler import _LRScheduler
 from Models.layers import ImagePyramid
+import datetime
 # IoU Loss
 def iou_loss(pred, mask):
     pred  = torch.sigmoid(pred)
@@ -119,7 +120,13 @@ def fit(model, train_dl, epochs=60, lr=1e-4,train_size = 384):
         #model.train()
         loss = train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,[train_size,train_size])
         fh = open(save_dir, 'a')
+        if epoch == 0:
+            fh.write(str(datetime.datetime.now()))
+            fh.write('Start record.')
         fh.write(str(epoch+1) + ' epoch_loss: ' + str(loss) + '\n')
+        if epoch+1 == epochs:
+            fh.write(str(datetime.datetime.now()))
+            fh.write('End record.')
         fh.close()
 
 
@@ -183,3 +190,8 @@ def training(args):
         os.makedirs(args.save_model)
     torch.save(model.state_dict(), args.save_model+args.method+'.pth')
     print('Saved as '+args.save_model+args.method+'.pth.')
+
+if __name__ == '__main__':
+    # Test
+    print(type(str(datetime.datetime.now())))
+    
