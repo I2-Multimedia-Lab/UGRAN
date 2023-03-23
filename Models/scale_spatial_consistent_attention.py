@@ -16,7 +16,7 @@ class SSCA(nn.Module):
         self.depth = depth
         self.dim = dim
         self.spatial_reduce = Conv2d(dim,dim,self.ratio,self.ratio)
-        self.norm = nn.BatchNorm2d(depth)
+        #self.norm = nn.BatchNorm2d(depth)
         self.channel_trans = Conv2d(in_channel,dim,3,relu=True)
         self.q = nn.Sequential(
             Conv2d(dim,dim,3,relu=True),
@@ -34,9 +34,9 @@ class SSCA(nn.Module):
     def forward(self, x):
 
         x = self.channel_trans(x)
-        b,c,h,w = x.size
+        b,c,h,w = x.shape
         x_sr = self.spatial_reduce(x)
-        x_sr = self.norm(x_sr)
+        #x_sr = self.norm(x_sr)
         q = self.q(x).view(b, self.dim, -1).permute(0, 2, 1)
         k = self.k(x_sr).view(b,self.dim,-1)
         v = self.v(x_sr).view(b, self.dim, -1).permute(0, 2, 1)

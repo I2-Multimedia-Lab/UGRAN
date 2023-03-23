@@ -17,6 +17,10 @@ class M3Net(nn.Module):
 
     def __init__(self,embed_dim=384,dim=96,img_size=384,method='M3Net-S'):
         super(M3Net, self).__init__()
+        if img_size == 384:
+            self.window_size=12
+        else:
+            self.window_size=7
         self.img_size = img_size
         self.feature_dims = []
         self.method = method
@@ -25,10 +29,10 @@ class M3Net(nn.Module):
                                         embed_dim=dim,
                                         depths=[2,2,18,2],
                                         num_heads=[4,8,16,32],
-                                        window_size=12)
+                                        window_size=self.window_size)
 
         #feature_dims=[dim,dim*2,dim*4,dim*8]
-        self.decoder = decoder(base_size=[img_size,img_size])
+        self.decoder = decoder(base_size=[img_size,img_size],window_size=self.window_size)
 
     def forward(self,x):
         fea = self.encoder(x)
