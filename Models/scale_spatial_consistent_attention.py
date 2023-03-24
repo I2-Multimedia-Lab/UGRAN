@@ -9,13 +9,13 @@ class SSCA(nn.Module):
         super(SSCA, self).__init__()
         
         if base_size is not None and stage is not None:
-            self.stage_size = (base_size[0] // (2 ** stage), base_size[1] // (2 ** stage))
+            self.stage_size = (base_size[0] // 16, base_size[1] // 16)
         else:
             self.stage_size = None
-        self.ratio = stage
+        self.ratio = 2**(4-stage)
         self.depth = depth
         self.dim = dim
-        self.spatial_reduce = Conv2d(dim,dim,self.ratio,self.ratio)
+        self.spatial_reduce = Conv2d(dim,dim,kernel_size=self.ratio,stride=self.ratio,padding='valid')
         #self.norm = nn.BatchNorm2d(depth)
         self.channel_trans = Conv2d(in_channel,dim,3,relu=True)
         self.q = nn.Sequential(
