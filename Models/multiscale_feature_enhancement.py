@@ -15,24 +15,24 @@ class MFE(nn.Module):
 
         if f_channel != None:
             # channel transform
-            self.ci = Conv2d(in_channel,in_channel,3,relu=True)
-            self.cf = Conv2d(f_channel, in_channel,3,relu=True)
+            self.ci = Conv2d(in_channel,out_channel,3,relu=True)
+            self.cf = Conv2d(f_channel, out_channel,3,relu=True)
 
             # spatial transform
-            self.si = Conv2d(in_channel,in_channel,3)
+            self.si = Conv2d(out_channel,out_channel,3)
             self.sf = nn.Sequential(
                 nn.Upsample(size=self.stage_size,mode='bilinear'),
-                Conv2d(in_channel,in_channel,3)
+                Conv2d(out_channel,out_channel,3)
                 )
 
         else:
-            self.ci = Conv2d(in_channel,in_channel,3,relu=True)
-            self.si = Conv2d(in_channel,in_channel,3)
+            self.ci = Conv2d(in_channel,out_channel,3,relu=True)
+            self.si = Conv2d(out_channel,out_channel,3)
 
         # diverse feature enhancement
-        self.conv_asy = asyConv(in_channel,out_channel,3)
-        self.conv_atr = Conv2d(in_channel,out_channel,3,dilation=2)
-        self.conv_ori = Conv2d(in_channel,out_channel,3,dilation=1)
+        self.conv_asy = asyConv(in_channels=out_channel, out_channels=out_channel, kernel_size=3, stride=1, padding=1, dilation=1, groups=1, padding_mode='zeros', deploy=False)
+        self.conv_atr = Conv2d(out_channel,out_channel,3,dilation=2)
+        self.conv_ori = Conv2d(out_channel,out_channel,3,dilation=1)
         
         self.conv_cat = Conv2d(out_channel*3,out_channel,3)
         self.conv_res = Conv2d(in_channel, out_channel, 1)
