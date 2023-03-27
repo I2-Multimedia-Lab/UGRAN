@@ -7,7 +7,9 @@ from Models.layers import *
 from Models.context_module import *
 from Models.attention_module import *
 from Models.decoder_module import *
+from Models.multiscale_feature_enhancement import MFE
 from Models.scale_spatial_consistent_attention import SSCA
+from Models.window_based_context_attention import WCA
 class decoder(nn.Module):
     r""" Multistage decoder. 
     
@@ -25,21 +27,27 @@ class decoder(nn.Module):
         self.base_size = base_size
         self.threshold = threshold
         
-        self.context1 = PAA_e(self.in_channels[0], self.depth, base_size=self.base_size, stage=0)
-        self.context2 = PAA_e(self.in_channels[1], self.depth, base_size=self.base_size, stage=1)
-        self.context3 = PAA_e(self.in_channels[2], self.depth, base_size=self.base_size, stage=2)
-        self.context4 = PAA_e(self.in_channels[3], self.depth, base_size=self.base_size, stage=3)
-        self.context5 = PAA_e(self.in_channels[4], self.depth, base_size=self.base_size, stage=4)
+        self.context1 = MFE(self.in_channels[0],self.in_channels[1], out_channel = self.depth, base_size=self.base_size, stage=2)
+        self.context2 = MFE(self.in_channels[1],self.in_channels[2], out_channel=self.depth, base_size=self.base_size, stage=2)
+        self.context3 = MFE(self.in_channels[2],self.in_channels[3], out_channel=self.depth, base_size=self.base_size, stage=3)
+        self.context4 = MFE(self.in_channels[3],self.in_channels[4], out_channel=self.depth, base_size=self.base_size, stage=4)
+        self.context5 = MFE(self.in_channels[4], out_channel = self.depth, base_size=self.base_size, stage=5)
 
         self.decoder = PAA_d(self.depth * 3, depth=self.depth, base_size=base_size, stage=2)
         self.fusion4 = SSCA(self.depth*2,dim=self.in_channels[3],depth=self.depth,stage=4)
         self.fusion3 = SSCA(self.depth*2,dim=self.in_channels[2],depth=self.depth,stage=3)
         self.fusion2 = SSCA(self.depth*2,dim=self.in_channels[1],depth=self.depth,stage=2)
+        self.fusion1 = SSCA(self.depth*2,dim=self.in_channels[1],depth=self.depth,stage=1)
         self.proj = Conv2d(depth,1,1)
-        self.attention0 = SICA(self.depth    , depth=self.depth, base_size=self.base_size, stage=0, lmap_in=True)
-        self.attention1 = SICA(self.depth * 2, depth=self.depth, base_size=self.base_size, stage=1, lmap_in=True)
+        '''
+        self.attention0 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size, stage=0)
+        self.attention1 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size, stage=1)
+        self.attention2 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size, stage=2)
+        '''
+        self.attention0 = SICA(self.depth, depth=self.depth, base_size=self.base_size, stage=0, lmap_in=True)
+        self.attention1 = SICA(self.depth*2, depth=self.depth, base_size=self.base_size, stage=1, lmap_in=True)
         self.attention2 = SICA(self.depth, depth=self.depth, base_size=self.base_size, stage=2              )
-
+        #'''
         #self.pc_loss_fn  = nn.L1Loss()
 
         self.transition0 = Transition(17)
@@ -79,13 +87,12 @@ class decoder(nn.Module):
         x4 = self.context4(x4) #16
         x5 = self.context5(x5) #32
 
-
         '''
         f3, d3 = self.decoder([x3, x4, x5]) #16
         '''
         f5 = self.res(x5,(H//16,W//16))
         f4 = self.fusion4(torch.cat([x4,f5],dim=1))
-        
+
         f4 = self.res(f4,(H//8,W//8))
         f3 = self.fusion3(torch.cat([x3,f4],dim=1))
         d3 = self.proj(f3)

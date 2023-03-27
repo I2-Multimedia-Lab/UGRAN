@@ -25,14 +25,16 @@ class M3Net(nn.Module):
         self.feature_dims = []
         self.method = method
         self.dim = dim
-        self.encoder = SwinTransformer(pretrain_img_size=img_size, 
+        self.encoder = ResNet()
+        '''
+        SwinTransformer(pretrain_img_size=img_size, 
                                         embed_dim=dim,
                                         depths=[2,2,18,2],
                                         num_heads=[4,8,16,32],
-                                        window_size=self.window_size)
+                                        window_size=self.window_size)'''
 
         #feature_dims=[dim,dim*2,dim*4,dim*8]
-        self.decoder = decoder(base_size=[img_size,img_size],window_size=self.window_size)
+        self.decoder = decoder(in_channels = [64,256,512,1024,2048],base_size=[img_size,img_size],window_size=self.window_size)
 
     def forward(self,x):
         fea = self.encoder(x)
@@ -73,7 +75,8 @@ class M3Net(nn.Module):
 if __name__ == '__main__':
     # Test
     model = M3Net(embed_dim=384,dim=128,img_size=384,method='M3Net-S')
-    model.encoder.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
+    model.encoder.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/resnet50.pth'), strict=False)
+                                             #swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
 
     model.cuda()
     

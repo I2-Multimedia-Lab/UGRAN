@@ -253,7 +253,6 @@ class asyConv(nn.Module):
                                       padding_mode=padding_mode)
             self.ver_bn = nn.BatchNorm2d(num_features=out_channels)
             self.hor_bn = nn.BatchNorm2d(num_features=out_channels)
-            self.initialize()
 
 
     def forward(self, input):

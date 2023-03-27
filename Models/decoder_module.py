@@ -33,10 +33,10 @@ class PAA_d(nn.Module):
 
         fx = self.conv1(fx)
 
-        Hfx = self.Hattn(fx)
-        Wfx = self.Wattn(fx)
+        #Hfx = self.Hattn(fx)
+        #Wfx = self.Wattn(fx)
 
-        fx = self.conv2(Hfx + Wfx)
+        #fx = self.conv2(Hfx + Wfx)
         fx = self.conv3(fx)
         fx = self.conv4(fx)
         out = self.conv5(fx)

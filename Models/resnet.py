@@ -106,7 +106,7 @@ class ResNet(nn.Module):
         out4 = self.layer3(out3)
         out5 = self.layer4(out4)
         # 1/4,1/8,1/16,1/32
-        return out2,out3,out4,out5
+        return out1,out2,out3,out4,out5
 
     def initialize(self):
         self.load_state_dict(torch.load('Weights/resnet50.pth'), strict=False)
