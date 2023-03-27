@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from .layers import *
+from .modules import *
 class MFE(nn.Module):
     # Multilevel Feature Enhancement
     def __init__(self, in_channel, f_channel = None, out_channel = 64, base_size=None, stage=None):
@@ -36,6 +37,7 @@ class MFE(nn.Module):
         
         self.conv_cat = Conv2d(out_channel*3,out_channel,3)
         self.conv_res = Conv2d(in_channel, out_channel, 1)
+        #self.initialize()
 
     def forward(self, x_i, x_f=None):
         x = self.ci(x_i)
@@ -52,3 +54,5 @@ class MFE(nn.Module):
         x = self.relu(x_cat + self.conv_res(x_i))
 
         return x
+    def initialize(self):
+        weight_init(self)

@@ -5,6 +5,7 @@ from Models.resnet import ResNet
 from Models.t2t_vit import T2t_vit_t_14
 from multistage_fusion import decoder
 from multilevel_interaction import MultilevelInteractionBlock
+from Models.modules import weight_init
 class M3Net(nn.Module):
     r""" Multilevel, Mixed and Multistage Attention Network for Salient Object Detection. 
     
@@ -36,6 +37,8 @@ class M3Net(nn.Module):
         #feature_dims=[dim,dim*2,dim*4,dim*8]
         self.decoder = decoder(in_channels = [64,256,512,1024,2048],base_size=[img_size,img_size],window_size=self.window_size)
 
+        self.initialize()
+
     def forward(self,x):
         fea = self.encoder(x)
         fea_0,fea_1_4,fea_1_8,fea_1_16,fea_1_32 = fea
@@ -58,6 +61,8 @@ class M3Net(nn.Module):
             
         self.to(device="cuda:{}".format(idx))
         return self
+    def initialize(self):
+        weight_init(self)
     def flops(self):
         flops = 0
         flops += self.encoder.flops()
@@ -88,8 +93,8 @@ if __name__ == '__main__':
     import torch
     from ptflops import get_model_complexity_info
 
-    macs, params = get_model_complexity_info(model, (3, 384, 384), as_strings=True, print_per_layer_stat=True, verbose=True)
+    #macs, params = get_model_complexity_info(model, (3, 384, 384), as_strings=True, print_per_layer_stat=True, verbose=True)
 
-    print('{:<30}  {:<8}'.format('macs: ', macs))
-    print('{:<30}  {:<8}'.format('parameters: ', params))
+    #print('{:<30}  {:<8}'.format('macs: ', macs))
+    #print('{:<30}  {:<8}'.format('parameters: ', params))
     

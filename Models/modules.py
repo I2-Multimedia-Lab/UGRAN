@@ -301,3 +301,147 @@ class MixedAttentionBlock(nn.Module):
         flops += 2*N*self.dim*self.dim*self.mlp_ratio
         return flops
     
+def weight_init(module):
+    for n, m in module.named_children():
+        if isinstance(m, nn.Conv2d):
+            nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
+            #nn.init.xavier_normal_(m.weight, gain=1)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+        elif isinstance(m, (nn.BatchNorm2d, nn.InstanceNorm2d,nn.LayerNorm)):
+            nn.init.ones_(m.weight)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+        elif isinstance(m, nn.Linear):
+            trunc_normal_(m.weight, std=.02)
+            if isinstance(m, nn.Linear) and m.bias is not None:
+                nn.init.constant_(m.bias, 0)
+        elif isinstance(m, (nn.Sequential,nn.ModuleList)):
+            weight_init(m)
+        elif isinstance(m, (nn.ReLU, nn.GELU, nn.Sigmoid, nn.PReLU, nn.AdaptiveAvgPool2d, nn.AdaptiveAvgPool1d, nn.Sigmoid, nn.Identity, nn.Upsample, nn.Dropout)):
+            pass
+        else:
+            m.initialize()
+
+class Conv2d(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, dilation=1, groups=1, padding='same', bias=False, bn=True, relu=False):
+        super(Conv2d, self).__init__()
+        if '__iter__' not in dir(kernel_size):
+            kernel_size = (kernel_size, kernel_size)
+        if '__iter__' not in dir(stride):
+            stride = (stride, stride)
+        if '__iter__' not in dir(dilation):
+            dilation = (dilation, dilation)
+
+        if padding == 'same':
+            width_pad_size = kernel_size[0] + (kernel_size[0] - 1) * (dilation[0] - 1)
+            height_pad_size = kernel_size[1] + (kernel_size[1] - 1) * (dilation[1] - 1)
+        elif padding == 'valid':
+            width_pad_size = 0
+            height_pad_size = 0
+        else:
+            if '__iter__' in dir(padding):
+                width_pad_size = padding[0] * 2
+                height_pad_size = padding[1] * 2
+            else:
+                width_pad_size = padding * 2
+                height_pad_size = padding * 2
+
+        width_pad_size = width_pad_size // 2 + (width_pad_size % 2 - 1)
+        height_pad_size = height_pad_size // 2 + (height_pad_size % 2 - 1)
+        pad_size = (width_pad_size, height_pad_size)
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, pad_size, dilation, groups, bias=bias)
+        self.initialize()
+
+        if bn is True:
+            self.bn = nn.BatchNorm2d(out_channels)
+        else:
+            self.bn = None
+        
+        if relu is True:
+            self.relu = nn.ReLU(inplace=True)
+        else:
+            self.relu = None
+
+    def forward(self, x):
+        x = self.conv(x)
+        if self.bn is not None:
+            x = self.bn(x)
+        if self.relu is not None:
+            x = self.relu(x)
+        return x
+    
+    def initialize(self):
+        weight_init(self)
+
+class CropLayer(nn.Module):
+    #   E.g., (-1, 0) means this layer should crop the first and last rows of the feature map. And (0, -1) crops the first and last columns
+    def __init__(self, crop_set):
+        super(CropLayer, self).__init__()
+        self.rows_to_crop = - crop_set[0]
+        self.cols_to_crop = - crop_set[1]
+        assert self.rows_to_crop >= 0
+        assert self.cols_to_crop >= 0
+
+    def forward(self, input):
+        return input[:, :, self.rows_to_crop:-self.rows_to_crop, self.cols_to_crop:-self.cols_to_crop]
+
+
+class asyConv(nn.Module):
+
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, padding_mode='zeros', deploy=False):
+        super(asyConv, self).__init__()
+        self.deploy = deploy
+        if deploy:
+            self.fused_conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=(kernel_size,kernel_size), stride=stride,
+                                      padding=padding, dilation=dilation, groups=groups, bias=True, padding_mode=padding_mode)
+            self.initialize()
+        else:
+            self.square_conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels,
+                                         kernel_size=(kernel_size, kernel_size), stride=stride,
+                                         padding=padding, dilation=dilation, groups=groups, bias=False,
+                                         padding_mode=padding_mode)
+            self.square_bn = nn.BatchNorm2d(num_features=out_channels)
+
+            center_offset_from_origin_border = padding - kernel_size // 2
+            ver_pad_or_crop = (center_offset_from_origin_border + 1, center_offset_from_origin_border)
+            hor_pad_or_crop = (center_offset_from_origin_border, center_offset_from_origin_border + 1)
+            if center_offset_from_origin_border >= 0:
+                self.ver_conv_crop_layer = nn.Identity()
+                ver_conv_padding = ver_pad_or_crop
+                self.hor_conv_crop_layer = nn.Identity()
+                hor_conv_padding = hor_pad_or_crop
+            else:
+                self.ver_conv_crop_layer = CropLayer(crop_set=ver_pad_or_crop)
+                ver_conv_padding = (0, 0)
+                self.hor_conv_crop_layer = CropLayer(crop_set=hor_pad_or_crop)
+                hor_conv_padding = (0, 0)
+            self.ver_conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=(3, 1),
+                                      stride=stride,
+                                      padding=ver_conv_padding, dilation=dilation, groups=groups, bias=False,
+                                      padding_mode=padding_mode)
+
+            self.hor_conv = nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=(1, 3),
+                                      stride=stride,
+                                      padding=hor_conv_padding, dilation=dilation, groups=groups, bias=False,
+                                      padding_mode=padding_mode)
+            self.ver_bn = nn.BatchNorm2d(num_features=out_channels)
+            self.hor_bn = nn.BatchNorm2d(num_features=out_channels)
+        self.initialize()
+
+    def forward(self, input):
+        if self.deploy:
+            return self.fused_conv(input)
+        else:
+            square_outputs = self.square_conv(input)
+            square_outputs = self.square_bn(square_outputs)
+            vertical_outputs = self.ver_conv_crop_layer(input)
+            vertical_outputs = self.ver_conv(vertical_outputs)
+            vertical_outputs = self.ver_bn(vertical_outputs)
+            horizontal_outputs = self.hor_conv_crop_layer(input)
+            horizontal_outputs = self.hor_conv(horizontal_outputs)
+            horizontal_outputs = self.hor_bn(horizontal_outputs)
+            return square_outputs + vertical_outputs + horizontal_outputs
+
+    def initialize(self):
+        weight_init(self)

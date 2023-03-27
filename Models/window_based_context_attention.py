@@ -51,6 +51,10 @@ class WCA(nn.Module):
         self.conv_out2 = Conv2d(depth+depth, depth, 3, relu=True)
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         self.conv_out4 = Conv2d(depth, out_channel, 1)
+
+    def initialize(self):
+        weight_init(self)
+        
     def forward(self, x, map_s,map_l=None):
         H,W  = x.shape[-2:]
         map_s = F.interpolate(map_s, size=x.shape[-2:], mode='bilinear', align_corners=False)

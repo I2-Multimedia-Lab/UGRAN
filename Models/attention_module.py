@@ -6,7 +6,7 @@ from torch.nn.parameter import Parameter
 from operator import xor
 from typing import Optional
 
-from Models.layers import *
+from Models.modules import *
 #from utils.misc import *
 class SICA(nn.Module):
     def __init__(self, in_channel, out_channel=1, depth=64, base_size=None, stage=None, lmap_in=False):
@@ -44,6 +44,7 @@ class SICA(nn.Module):
         self.conv_out2 = Conv2d(in_channel, depth, 3, relu=True)
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         self.conv_out4 = Conv2d(depth, out_channel, 1)
+        self.initialize()
 
     def forward(self, x, smap, lmap: Optional[torch.Tensor]=None):
         '''
@@ -107,3 +108,5 @@ class SICA(nn.Module):
         out = self.conv_out4(x)
 
         return x, out
+    def initialize(self):
+        weight_init(self)

@@ -109,7 +109,7 @@ class ResNet(nn.Module):
         return out1,out2,out3,out4,out5
 
     def initialize(self):
-        self.load_state_dict(torch.load('Weights/resnet50.pth'), strict=False)
+        self.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/resnet50.pth'), strict=False)
         
 '''
 
