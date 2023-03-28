@@ -93,8 +93,8 @@ if __name__ == '__main__':
     import torch
     from ptflops import get_model_complexity_info
 
-    #macs, params = get_model_complexity_info(model, (3, 384, 384), as_strings=True, print_per_layer_stat=True, verbose=True)
+    macs, params = get_model_complexity_info(model, (3, 384, 384), as_strings=True, print_per_layer_stat=True, verbose=True)
 
-    #print('{:<30}  {:<8}'.format('macs: ', macs))
-    #print('{:<30}  {:<8}'.format('parameters: ', params))
+    print('{:<30}  {:<8}'.format('macs: ', macs))
+    print('{:<30}  {:<8}'.format('parameters: ', params))
     

@@ -28,7 +28,7 @@ class decoder(nn.Module):
         self.base_size = base_size
         self.threshold = threshold
         
-        self.context1 = MFE(self.in_channels[0],self.in_channels[1], out_channel = self.depth, base_size=self.base_size, stage=2)
+        #self.context1 = MFE(self.in_channels[0],self.in_channels[1], out_channel = self.depth, base_size=self.base_size, stage=2)
         self.context2 = MFE(self.in_channels[1],self.in_channels[2], out_channel=self.depth, base_size=self.base_size, stage=2)
         self.context3 = MFE(self.in_channels[2],self.in_channels[3], out_channel=self.depth, base_size=self.base_size, stage=3)
         self.context4 = MFE(self.in_channels[3],self.in_channels[4], out_channel=self.depth, base_size=self.base_size, stage=4)
@@ -40,7 +40,7 @@ class decoder(nn.Module):
         self.fusion2 = SSCA(self.depth*2,dim=self.in_channels[1],depth=self.depth,stage=2)
         self.fusion1 = SSCA(self.depth*2,dim=self.in_channels[1],depth=self.depth,stage=1)
         self.proj = Conv2d(depth,1,1)
-        '''
+        #'''
         self.attention0 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size, stage=0)
         self.attention1 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size, stage=1)
         self.attention2 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size, stage=2)
@@ -48,7 +48,7 @@ class decoder(nn.Module):
         self.attention0 = SICA(self.depth, depth=self.depth, base_size=self.base_size, stage=0, lmap_in=True)
         self.attention1 = SICA(self.depth*2, depth=self.depth, base_size=self.base_size, stage=1, lmap_in=True)
         self.attention2 = SICA(self.depth, depth=self.depth, base_size=self.base_size, stage=2              )
-        #'''
+        '''
         #self.pc_loss_fn  = nn.L1Loss()
 
         self.transition0 = Transition(17)
@@ -82,7 +82,7 @@ class decoder(nn.Module):
     
         x1,x2,x3,x4,x5 = x
         
-        x1 = self.context1(x1) #4
+        #x1 = self.context1(x1) #4
         x2 = self.context2(x2) #4
         x3 = self.context3(x3) #8
         x4 = self.context4(x4) #16
@@ -100,17 +100,14 @@ class decoder(nn.Module):
 
         f3 = self.res(f3, (H // 4,  W // 4 ))
         f2 = self.fusion2(torch.cat([x2,f3],dim=1))
-        f2, p2 = self.attention2(f2, d3)
-        d2 = p2
+        f2, d2 = self.attention2(f2, d3)
 
-        x1 = self.res(x1, (H // 2, W // 2))
+        #x1 = self.res(x1, (H // 2, W // 2))
         f2 = self.res(f2, (H // 2, W // 2))
-        f1, p1 = self.attention1(torch.cat([x1, f2], dim=1), d2, p2) #2
-        d1 = p1
+        f1, d1 = self.attention1(f2, d2) #2
         
         f1 = self.res(f1, (H, W))
-        _, p0 = self.attention0(f1, d1, p1) #2
-        d0 = p0
+        _, d0 = self.attention0(f1, d1) #2
         '''
         xx = p1.detach().cpu().squeeze()
         xx = xx-xx.min()
