@@ -2,12 +2,12 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 #from Models.modules import *
-from .layers import *
+from .modules import *
 class WCA(nn.Module):
     # Window-based Context Attention
     def __init__(self, in_channel, out_channel=1, depth=64, base_size=[384,384], window_size = 12, c_num=3, stage=None):
         super(WCA, self).__init__()
-        
+        '''
         if base_size is not None and stage is not None:
             self.stage_size = (base_size[0] // (2 ** stage), base_size[1] // (2 ** stage))
         else:
@@ -48,7 +48,8 @@ class WCA(nn.Module):
         )
 
         self.conv_out1 = Conv2d(depth,depth,1,relu=True)
-        self.conv_out2 = Conv2d(depth+depth, depth, 3, relu=True)
+        '''
+        self.conv_out2 = Conv2d(in_channel, depth, 3, relu=True)
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         self.conv_out4 = Conv2d(depth, out_channel, 1)
 
@@ -56,6 +57,7 @@ class WCA(nn.Module):
         weight_init(self)
         
     def forward(self, x, map_s,map_l=None):
+        '''
         H,W  = x.shape[-2:]
         map_s = F.interpolate(map_s, size=x.shape[-2:], mode='bilinear', align_corners=False)
         map_s = torch.sigmoid(map_s)
@@ -97,7 +99,8 @@ class WCA(nn.Module):
         attn = torch.bmm(attn, v).permute(0, 2, 1).contiguous().view(b, -1, self.window_size, self.window_size)
         x_reverse = window_reverse(attn,self.window_size,H,W)
         x_cat = torch.cat([x,x_reverse],dim=1)
-        x = self.conv_out2(x_cat)
+        '''
+        x = self.conv_out2(x)
         x = self.conv_out3(x)
         out = self.conv_out4(x)
         return x, out

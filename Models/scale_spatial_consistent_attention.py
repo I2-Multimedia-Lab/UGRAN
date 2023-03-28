@@ -59,7 +59,7 @@ class SSCA1(nn.Module):
     
 class SSCA(nn.Module):
     # Scale Spatial Consistent Attention
-    def __init__(self, in_channel, depth, dim, stacked=1, base_size=[384,384], stage=1):
+    def __init__(self, in_channel, depth, dim, stacked=2, base_size=[384,384], stage=1):
         super(SSCA, self).__init__()
         
         if base_size is not None and stage is not None:
@@ -69,7 +69,7 @@ class SSCA(nn.Module):
         self.ratio = 2**(4-stage)
         self.stacked = stacked
         self.dim = dim
-
+        '''
         self.channel_trans = Conv2d(in_channel,dim,1,bn=False)
         self.norm = nn.LayerNorm(dim)
         self.blocks = nn.ModuleList([
@@ -78,11 +78,12 @@ class SSCA(nn.Module):
             for i in range(stacked)])
     
         #self.conv_out1 = Conv2d(dim,depth,1,relu=True)
-        self.conv_out2 = Conv2d(dim*2, depth, 3, relu=True)
-        self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
+        '''
+        self.conv_out2 = Conv2d(in_channel, depth, 3, relu=True)
+        #self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         #self.initialize()
     def forward(self, x):
-
+        '''
         x = self.channel_trans(x)
         B,C,H,W = x.shape
         x_att = x.reshape(B,C,-1).transpose(1,2)
@@ -91,8 +92,9 @@ class SSCA(nn.Module):
         x_att = self.norm(x_att).transpose(1,2).reshape(B,C,H,W)
 
         x = torch.cat([x, x_att], dim=1)
+        '''
         x = self.conv_out2(x)
-        x = self.conv_out3(x)
+        #x = self.conv_out3(x)
         return x
     def initialize(self):
         weight_init(self)
