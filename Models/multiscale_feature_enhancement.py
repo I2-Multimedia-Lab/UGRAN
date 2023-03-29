@@ -6,7 +6,7 @@ from .layers import *
 from .modules import *
 class MFE(nn.Module):
     # Multilevel Feature Enhancement
-    def __init__(self, in_channel, f_channel = None, out_channel = 64, base_size=None, stage=None):
+    def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
         super(MFE, self).__init__()
         self.relu = nn.ReLU(True)
         if base_size is not None and stage is not None:
@@ -14,21 +14,31 @@ class MFE(nn.Module):
         else:
             self.stage_size = None
 
-        if f_channel != None:
+        self.ci = Conv2d(in_channel,out_channel,3,relu=True)
+        self.si = Conv2d(out_channel,out_channel,3)
+
+        if h_channel != None:
             # channel transform
-            self.ci = Conv2d(in_channel,out_channel,3,relu=True)
-            self.cf = Conv2d(f_channel, out_channel,3,relu=True)
+            self.ch = Conv2d(h_channel, out_channel,3,relu=True)
 
             # spatial transform
-            self.si = Conv2d(out_channel,out_channel,3)
-            self.sf = nn.Sequential(
+            self.sh = nn.Sequential(
+                nn.Upsample(size=self.stage_size,mode='bilinear'),
+                Conv2d(out_channel,out_channel,3)
+                )
+        
+        if l_channel != None:
+            # channel transform
+            self.cl = Conv2d(l_channel, out_channel,3,relu=True)
+
+            # spatial transform
+            self.sl = nn.Sequential(
                 nn.Upsample(size=self.stage_size,mode='bilinear'),
                 Conv2d(out_channel,out_channel,3)
                 )
 
-        else:
-            self.ci = Conv2d(in_channel,out_channel,3,relu=True)
-            self.si = Conv2d(out_channel,out_channel,3)
+        
+
 
         # diverse feature enhancement
         self.conv_asy = asyConv(in_channels=out_channel, out_channels=out_channel, kernel_size=3, stride=1, padding=1, dilation=1, groups=1, padding_mode='zeros', deploy=False)
@@ -39,13 +49,18 @@ class MFE(nn.Module):
         self.conv_res = Conv2d(in_channel, out_channel, 1)
         #self.initialize()
 
-    def forward(self, x_i, x_f=None):
+    def forward(self, x_i, x_l=None, x_h=None):
         x = self.ci(x_i)
         x = self.si(x)
-        if x_f != None:
-            x_f = self.cf(x_f)
-            x_f = self.sf(x_f)
-            x = x + x_f
+        if x_h != None:
+            x_h = self.ch(x_h)
+            x_h = self.sh(x_h)
+            x = x + x_h
+        
+        if x_l != None:
+            x_l = self.cl(x_l)
+            x_l = self.sl(x_l)
+            x = x + x_l
         
         asy = self.conv_asy(x)
         atr = self.conv_atr(x)
