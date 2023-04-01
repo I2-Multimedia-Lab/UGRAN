@@ -59,7 +59,7 @@ class SSCA1(nn.Module):
     
 class SSCA(nn.Module):
     # Scale Spatial Consistent Attention
-    def __init__(self, in_channel, depth, dim, stacked=2, base_size=[384,384], stage=1):
+    def __init__(self, in_channel, depth, dim, stacked=1, base_size=[384,384], stage=1):
         super(SSCA, self).__init__()
         
         if base_size is not None and stage is not None:
@@ -69,7 +69,7 @@ class SSCA(nn.Module):
         self.ratio = 2**(4-stage)
         self.stacked = stacked
         self.dim = dim
-        '''
+        self.relu = nn.ReLU(inplace=True)
         self.channel_trans = Conv2d(in_channel,dim,1,bn=False)
         self.norm = nn.LayerNorm(dim)
         self.blocks = nn.ModuleList([
@@ -77,25 +77,27 @@ class SSCA(nn.Module):
                  drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm, sr_ratio=self.ratio,)
             for i in range(stacked)])
     
-        #self.conv_out1 = Conv2d(dim,depth,1,relu=True)
-        '''
-        self.conv_out2 = Conv2d(in_channel, depth, 3, relu=True)
-        #self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
+        self.conv_out1 = Conv2d(dim,depth,3,relu=True)
+        
+        #self.conv_out2 = Conv2d(dim, dim, 3, relu=True)
+        self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
+        self.conv_out4 = Conv2d(depth, 1, 1)
         #self.initialize()
-    def forward(self, x):
-        '''
-        x = self.channel_trans(x)
+    def forward(self, x_in):
+        
+        x = self.channel_trans(x_in)
         B,C,H,W = x.shape
         x_att = x.reshape(B,C,-1).transpose(1,2)
         for blk in self.blocks:
             x_att = blk(x_att,H,W)
-        x_att = self.norm(x_att).transpose(1,2).reshape(B,C,H,W)
+        x_att = x_att.transpose(1,2).reshape(B,C,H,W)
 
-        x = torch.cat([x, x_att], dim=1)
-        '''
-        x = self.conv_out2(x)
-        #x = self.conv_out3(x)
-        return x
+        x = x+x_att
+        
+        x = self.conv_out1(x)
+        x = self.conv_out3(x)
+        out = self.conv_out4(x)
+        return x,out
     def initialize(self):
         weight_init(self)
     
@@ -198,8 +200,8 @@ class SABlock(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, x, H, W):
-        x = x + self.drop_path(self.attn(self.norm1(x), H, W))
-        x = x + self.drop_path(self.mlp(self.norm2(x), H, W))
+        x = self.drop_path(self.attn(self.norm1(x), H, W))
+        #x = x + self.drop_path(self.mlp(self.norm2(x), H, W))
 
         return x
 

@@ -56,7 +56,7 @@ class WCA(nn.Module):
     def initialize(self):
         weight_init(self)
         
-    def forward(self, x, map_s,map_l=None):
+    def forward(self, x, map_s=None,map_l=None):
         '''
         H,W  = x.shape[-2:]
         map_s = F.interpolate(map_s, size=x.shape[-2:], mode='bilinear', align_corners=False)
@@ -99,10 +99,13 @@ class WCA(nn.Module):
         attn = torch.bmm(attn, v).permute(0, 2, 1).contiguous().view(b, -1, self.window_size, self.window_size)
         x_reverse = window_reverse(attn,self.window_size,H,W)
         x_cat = torch.cat([x,x_reverse],dim=1)
-        '''
+        
         x = self.conv_out2(x)
         x = self.conv_out3(x)
-        out = self.conv_out4(x)
+        '''
+        if map_s == None:
+            out = self.conv_out4(x)
+        else: out = map_s
         return x, out
     
 def window_partition(x, window_size):

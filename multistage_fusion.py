@@ -83,31 +83,30 @@ class decoder(nn.Module):
         x1,x2,x3,x4,x5 = x
         
         #x1 = self.context1(x1) #4
-        x2_ = self.context2(x2,x1,x3) #4
-        x3_ = self.context3(x3,x2,x4) #8
-        x4_ = self.context4(x4,x3,x5) #16
-        x5_ = self.context5(x5,x4) #32
+        x2_ = self.context2(x2,x_h=x3) #4
+        x3_ = self.context3(x3,x_h=x4) #8
+        x4_ = self.context4(x4,x_h=x5) #16
+        x5_ = self.context5(x5) #32
 
         '''
         f3, d3 = self.decoder([x3, x4, x5]) #16
         '''
         f5 = self.res(x5_,(H//16,W//16))
-        f4 = self.fusion4(torch.cat([x4_,f5],dim=1))
+        f4, d4 = self.fusion4(torch.cat([x4_,f5],dim=1))
 
         f4 = self.res(f4,(H//8,W//8))
-        f3 = self.fusion3(torch.cat([x3_,f4],dim=1))
-        d3 = self.proj(f3)
+        f3, d3 = self.fusion3(torch.cat([x3_,f4],dim=1))
 
         f3 = self.res(f3, (H // 4,  W // 4 ))
-        f2 = self.fusion2(torch.cat([x2_,f3],dim=1))
-        f2, d2 = self.attention2(f2, d3)
+        f2, d2 = self.fusion2(torch.cat([x2_,f3],dim=1))
+        f2, d2 = self.attention2(f2, d2)
 
         #x1 = self.res(x1, (H // 2, W // 2))
         f2 = self.res(f2, (H // 2, W // 2))
-        f1, d1 = self.attention1(f2, d2) #2
+        f1, d1 = self.attention1(f2) #2
         
         f1 = self.res(f1, (H, W))
-        _, d0 = self.attention0(f1, d1) #2
+        _, d0 = self.attention0(f1) #2
         '''
         xx = p1.detach().cpu().squeeze()
         xx = xx-xx.min()

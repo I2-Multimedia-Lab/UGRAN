@@ -37,9 +37,6 @@ class MFE(nn.Module):
                 Conv2d(out_channel,out_channel,3)
                 )
 
-        
-
-
         # diverse feature enhancement
         self.conv_asy = asyConv(in_channels=out_channel, out_channels=out_channel, kernel_size=3, stride=1, padding=1, dilation=1, groups=1, padding_mode='zeros', deploy=False)
         self.conv_atr = Conv2d(out_channel,out_channel,3,dilation=2)
