@@ -18,7 +18,7 @@ class SICA(nn.Module):
             self.stage_size = (base_size[0] // (2 ** stage), base_size[1] // (2 ** stage))
         else:
             self.stage_size = None
-        '''
+        
         self.conv_query = nn.Sequential(Conv2d(in_channel, depth, 3, relu=True),
                                         Conv2d(depth, depth, 3, relu=True))
         self.conv_key   = nn.Sequential(Conv2d(in_channel, depth, 1, relu=True),
@@ -40,14 +40,12 @@ class SICA(nn.Module):
         
         if self.lmap_in is True:
             self.lthreshold = Parameter(torch.tensor([0.5]))
-        '''
-        self.conv_out2 = Conv2d(in_channel, depth, 3, relu=True)
-        self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
-        self.conv_out4 = Conv2d(depth, out_channel, 1)
-        self.initialize()
+        
+
+        #self.initialize()
 
     def forward(self, x, smap, lmap: Optional[torch.Tensor]=None):
-        '''
+        
         assert not xor(self.lmap_in is True, lmap is not None)
         b, c, h, w = x.shape
         
@@ -102,7 +100,7 @@ class SICA(nn.Module):
         context = self.conv_out1(context)
         
         x = torch.cat([x, context], dim=1)
-        '''
+        
         x = self.conv_out2(x)
         x = self.conv_out3(x)
         out = self.conv_out4(x)

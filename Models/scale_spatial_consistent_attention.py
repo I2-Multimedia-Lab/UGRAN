@@ -59,7 +59,7 @@ class SSCA1(nn.Module):
     
 class SSCA(nn.Module):
     # Scale Spatial Consistent Attention
-    def __init__(self, in_channel, depth, dim, stacked=1, base_size=[384,384], stage=1):
+    def __init__(self, in_channel, depth, dim, num_heads=1, stacked=1, base_size=[384,384], stage=1):
         super(SSCA, self).__init__()
         
         if base_size is not None and stage is not None:
@@ -73,7 +73,7 @@ class SSCA(nn.Module):
         self.channel_trans = Conv2d(in_channel,dim,1,bn=False)
         self.norm = nn.LayerNorm(dim)
         self.blocks = nn.ModuleList([
-            SABlock(dim=dim, num_heads=1, mlp_ratio=3., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
+            SABlock(dim=dim, num_heads=num_heads, mlp_ratio=3., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
                  drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm, sr_ratio=self.ratio,)
             for i in range(stacked)])
     

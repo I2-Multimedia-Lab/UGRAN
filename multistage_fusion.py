@@ -28,27 +28,27 @@ class decoder(nn.Module):
         self.base_size = base_size
         self.threshold = threshold
         
-        #self.context1 = MFE(self.in_channels[0],self.in_channels[1], out_channel = self.depth, base_size=self.base_size, stage=2)
+        self.context1 = MFE(in_channel=self.in_channels[0],h_channel=self.in_channels[1], out_channel = self.depth, base_size=self.base_size, stage=2)
         self.context2 = MFE(in_channel=self.in_channels[1],l_channel=self.in_channels[0],h_channel=self.in_channels[2], out_channel=self.depth, base_size=self.base_size, stage=2)
         self.context3 = MFE(in_channel=self.in_channels[2],l_channel=self.in_channels[1],h_channel=self.in_channels[3], out_channel=self.depth, base_size=self.base_size, stage=3)
         self.context4 = MFE(in_channel=self.in_channels[3],l_channel=self.in_channels[2],h_channel=self.in_channels[4], out_channel=self.depth, base_size=self.base_size, stage=4)
         self.context5 = MFE(in_channel=self.in_channels[4],l_channel=self.in_channels[3],out_channel=self.depth, base_size=self.base_size, stage=5)
 
         #self.decoder = PAA_d(self.depth * 3, depth=self.depth, base_size=base_size, stage=2)
-        self.fusion4 = SSCA(self.depth*2,dim=self.in_channels[3],depth=self.depth,stage=4)
-        self.fusion3 = SSCA(self.depth*2,dim=self.in_channels[2],depth=self.depth,stage=3)
-        self.fusion2 = SSCA(self.depth*2,dim=self.in_channels[1],depth=self.depth,stage=2)
-        self.fusion1 = SSCA(self.depth*2,dim=self.in_channels[1],depth=self.depth,stage=1)
+        self.fusion4 = SSCA(self.depth*2,dim=self.in_channels[3],num_heads=4,depth=self.depth,stage=4)
+        self.fusion3 = SSCA(self.depth*2,dim=self.in_channels[2],num_heads=2,depth=self.depth,stage=3)
+        self.fusion2 = SSCA(self.depth*2,dim=self.in_channels[1],num_heads=1,depth=self.depth,stage=2)
+        #self.fusion1 = SSCA(self.depth*2,dim=self.in_channels[1],depth=self.depth,stage=1)
         self.proj = Conv2d(depth,1,1)
-        #'''
+        '''
         self.attention0 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size, stage=0)
         self.attention1 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size, stage=1)
         self.attention2 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size, stage=2)
         '''
-        self.attention0 = SICA(self.depth, depth=self.depth, base_size=self.base_size, stage=0, lmap_in=True)
-        self.attention1 = SICA(self.depth*2, depth=self.depth, base_size=self.base_size, stage=1, lmap_in=True)
+        self.attention0 = SICA(self.depth, depth=self.depth, base_size=self.base_size, stage=0)
+        self.attention1 = SICA(self.depth*2, depth=self.depth, base_size=self.base_size, stage=1)
         self.attention2 = SICA(self.depth, depth=self.depth, base_size=self.base_size, stage=2              )
-        '''
+        #'''
         #self.pc_loss_fn  = nn.L1Loss()
 
         self.transition0 = Transition(17)
@@ -82,31 +82,32 @@ class decoder(nn.Module):
     
         x1,x2,x3,x4,x5 = x
         
-        #x1 = self.context1(x1) #4
-        x2_ = self.context2(x2,x_h=x3) #4
-        x3_ = self.context3(x3,x_h=x4) #8
-        x4_ = self.context4(x4,x_h=x5) #16
-        x5_ = self.context5(x5) #32
+        x1 = self.context1(x1,x_h=x2) #4
+        x2 = self.context2(x2,x_h=x3) #4
+        x3 = self.context3(x3,x_h=x4) #8
+        x4 = self.context4(x4,x_h=x5) #16
+        x5 = self.context5(x5) #32
 
         '''
         f3, d3 = self.decoder([x3, x4, x5]) #16
         '''
-        f5 = self.res(x5_,(H//16,W//16))
-        f4, d4 = self.fusion4(torch.cat([x4_,f5],dim=1))
+        f5 = self.res(x5,(H//16,W//16))
+        f4, d4 = self.fusion4(torch.cat([x4,f5],dim=1))
 
         f4 = self.res(f4,(H//8,W//8))
-        f3, d3 = self.fusion3(torch.cat([x3_,f4],dim=1))
+        f3, d3 = self.fusion3(torch.cat([x3,f4],dim=1))
 
         f3 = self.res(f3, (H // 4,  W // 4 ))
-        f2, d2 = self.fusion2(torch.cat([x2_,f3],dim=1))
-        f2, d2 = self.attention2(f2, d2)
+        f2, d2 = self.fusion2(torch.cat([x2,f3],dim=1))
+        f2, d2 = self.attention2(f2, d3)
 
-        #x1 = self.res(x1, (H // 2, W // 2))
+        x1 = self.res(x1, (H // 2, W // 2))
         f2 = self.res(f2, (H // 2, W // 2))
-        f1, d1 = self.attention1(f2) #2
+        f2 = torch.cat([x1,f2],dim=1)
+        f1, d1 = self.attention1(f2,d2) #2
         
         f1 = self.res(f1, (H, W))
-        _, d0 = self.attention0(f1) #2
+        _, d0 = self.attention0(f1,d1) #2
         '''
         xx = p1.detach().cpu().squeeze()
         xx = xx-xx.min()
