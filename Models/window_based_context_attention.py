@@ -7,7 +7,7 @@ class WCA(nn.Module):
     # Window-based Context Attention
     def __init__(self, in_channel, out_channel=1, depth=64, base_size=[384,384], window_size = 12, c_num=3, stage=None):
         super(WCA, self).__init__()
-        '''
+        
         if base_size is not None and stage is not None:
             self.stage_size = (base_size[0] // (2 ** stage), base_size[1] // (2 ** stage))
         else:
@@ -17,8 +17,8 @@ class WCA(nn.Module):
         self.depth = depth
         self.window_size = window_size
         self.channel_trans = Conv2d(c_num,depth,1)
-        self.threshold = Parameter(torch.tensor([0.5]))
-        self.lthreshold = Parameter(torch.tensor([0.5]))
+        self.threshold = nn.Parameter(torch.tensor([0.5]))
+        self.lthreshold = nn.Parameter(torch.tensor([0.5]))
 
         # define a parameter table of relative position bias
         self.relative_position_bias_table = nn.Parameter(
@@ -47,17 +47,17 @@ class WCA(nn.Module):
             Conv2d(c_num,depth,1,relu=True),
         )
 
-        self.conv_out1 = Conv2d(depth,depth,1,relu=True)
-        '''
-        self.conv_out2 = Conv2d(in_channel, depth, 3, relu=True)
+        self.conv_out1 = Conv2d(depth,depth,3,relu=True)
+        
+        self.conv_out2 = Conv2d(in_channel+depth, depth, 3, relu=True)
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         self.conv_out4 = Conv2d(depth, out_channel, 1)
 
     def initialize(self):
         weight_init(self)
         
-    def forward(self, x, map_s=None,map_l=None):
-        '''
+    def forward(self, x, map_s,map_l=None):
+        
         H,W  = x.shape[-2:]
         map_s = F.interpolate(map_s, size=x.shape[-2:], mode='bilinear', align_corners=False)
         map_s = torch.sigmoid(map_s)
@@ -98,14 +98,15 @@ class WCA(nn.Module):
         
         attn = torch.bmm(attn, v).permute(0, 2, 1).contiguous().view(b, -1, self.window_size, self.window_size)
         x_reverse = window_reverse(attn,self.window_size,H,W)
+        x_reverse = self.conv_out1(x_reverse)
         x_cat = torch.cat([x,x_reverse],dim=1)
         
-        x = self.conv_out2(x)
+        x = self.conv_out2(x_cat)
         x = self.conv_out3(x)
-        '''
-        if map_s == None:
-            out = self.conv_out4(x)
-        else: out = map_s
+        out = self.conv_out4(x)
+        #if map_s == None:
+        #    
+        #else: out = map_s
         return x, out
     
 def window_partition(x, window_size):
