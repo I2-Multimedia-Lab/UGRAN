@@ -3,6 +3,7 @@ import torch.nn as nn
 from Models.swin import SwinTransformer
 from Models.resnet import ResNet
 from Models.t2t_vit import T2t_vit_t_14
+from Models.res2net_v1b import res2net50_v1b_26w_4s
 from multistage_fusion import decoder
 from multilevel_interaction import MultilevelInteractionBlock
 from Models.modules import weight_init
@@ -33,7 +34,9 @@ class M3Net(nn.Module):
                                         depths=[2,2,18,2],
                                         num_heads=[4,8,16,32],
                                         window_size=self.window_size)'''
-
+        '''
+        res2net50_v1b_26w_4s(pretrained=pretrained), [64, 256, 512, 1024, 2048], depth, base_size, **kwargs)
+        '''
         #feature_dims=[dim,dim*2,dim*4,dim*8]
         self.decoder = decoder(in_channels = [64,256,512,1024,2048],base_size=[img_size,img_size],window_size=self.window_size)
 
@@ -80,7 +83,7 @@ class M3Net(nn.Module):
 if __name__ == '__main__':
     # Test
     model = M3Net(embed_dim=384,dim=128,img_size=384,method='M3Net-S')
-    model.encoder.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/resnet50.pth'), strict=False)
+    #model.encoder.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/resnet50.pth'), strict=False)
                                              #swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
 
     model.cuda()

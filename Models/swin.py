@@ -565,6 +565,10 @@ class SwinTransformer(nn.Module):
                 for param in m.parameters():
                     param.requires_grad = False
 
+    def initialize(self):
+        if self.pretrain_img_size == 384:
+            self.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
+
     def init_weights(self, pretrained=None):
         """Initialize the weights in backbone.
 

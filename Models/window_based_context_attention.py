@@ -41,10 +41,10 @@ class WCA(nn.Module):
             Conv2d(depth,depth,3,relu=True),
         )
         self.k = nn.Sequential(
-            Conv2d(c_num,depth,1,relu=True),
+            Conv2d(depth,depth,1,relu=True),
         )
         self.v = nn.Sequential(
-            Conv2d(c_num,depth,1,relu=True),
+            Conv2d(depth,depth,1,relu=True),
         )
 
         self.conv_out1 = Conv2d(depth,depth,3,relu=True)
@@ -62,11 +62,11 @@ class WCA(nn.Module):
         map_s = F.interpolate(map_s, size=x.shape[-2:], mode='bilinear', align_corners=False)
         map_s = torch.sigmoid(map_s)
         p = map_s - self.threshold
-
+        
         fg = torch.clip(p, 0, 1) # foreground
         bg = torch.clip(-p, 0, 1) # background
         cg = self.threshold - torch.abs(p) # confusion area
-
+        '''
         if map_l is not None:
             map_l = F.interpolate(map_l, size=x.shape[-2:], mode='bilinear', align_corners=False)
             map_l = torch.sigmoid(map_l)
@@ -77,11 +77,11 @@ class WCA(nn.Module):
             context = [fg, bg, cg, fp, bp]
         else:
             context = [fg, bg, cg]
-
-        context = torch.cat(context, dim=1)
+        '''
+        x_uncertain = x-cg
         
         x_windows = window_partition(x,self.window_size)
-        c_windows = window_partition(context,self.window_size)
+        c_windows = window_partition(x_uncertain,self.window_size)
         b = x_windows.shape[0]
         q = self.q(x_windows).view(b, self.depth, -1).permute(0, 2, 1)
         k = self.k(c_windows).view(b,self.depth,-1)

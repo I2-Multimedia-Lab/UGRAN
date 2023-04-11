@@ -41,8 +41,8 @@ class decoder(nn.Module):
         #self.fusion1 = SSCA(self.depth*2,dim=self.in_channels[1],depth=self.depth,stage=1)
         self.proj = Conv2d(depth,1,1)
         #'''
-        self.attention0 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=5, stage=0)
-        self.attention1 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=5, stage=1)
+        self.attention0 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=0)
+        self.attention1 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=1)
         self.attention2 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=2)
         '''
         self.attention0 = SICA(self.depth, depth=self.depth, base_size=self.base_size, stage=0)
@@ -99,16 +99,16 @@ class decoder(nn.Module):
 
         f3 = self.res(f3, (H // 4,  W // 4 ))
         f2, d2 = self.fusion2(torch.cat([x2,f3],dim=1))
-        f2, p2 = self.attention2(f2, d3)
-        d2 = self.res(d3, (H//4,W//4))+p2
+        f2, d2 = self.attention2(f2, d3)
+        #d2 = self.res(d3, (H//4,W//4))+p2
 
         f2 = self.res(f2, (H // 2, W // 2))
-        f1, p1 = self.attention1(f2,d2,map_l=p2) #2
-        d1 = self.res(d2, (H//2,W//2))+p1
+        f1, d1 = self.attention1(f2,d2) #2
+        #d1 = self.res(d2, (H//2,W//2))+p1
 
         f1 = self.res(f1, (H, W))
-        _, p0 = self.attention0(f1,d1,map_l=p1) #2
-        d0 = self.res(d1, (H,W))+p0
+        _, d0 = self.attention0(f1,d1) #2
+        #d0 = self.res(d1, (H,W))+p0
 
         '''
         xx = p1.detach().cpu().squeeze()
