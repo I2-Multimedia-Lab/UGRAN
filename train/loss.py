@@ -36,6 +36,8 @@ def wbce(pred,mask):
     w3 = torch.abs(F.avg_pool2d(mask, kernel_size=31, stride=1, padding=15) - mask)
 
     weit = 1 + 1.5 * (w1+w2+w3)
+    #weit = 1 + 5 * torch.abs(F.avg_pool2d(mask, kernel_size=15, stride=1, padding=7) - mask)
+
     wbce = F.binary_cross_entropy_with_logits(pred, mask, reduce='none')
     wbce = (weit * wbce).sum(dim=(2, 3)) / weit.sum(dim=(2, 3))
     return wbce.mean()
@@ -59,3 +61,6 @@ def adaptive_pixel_intensity_loss(pred, mask):
     amae = (omega * mae).sum(dim=(2, 3)) / (omega - 1).sum(dim=(2, 3))
 
     return (0.7 * abce + 0.7 * aiou + 0.7 * amae).mean()
+
+def loss_func(pred,mask):
+    return F.binary_cross_entropy_with_logits(pred,mask)+iou_loss(pred,mask)

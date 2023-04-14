@@ -67,7 +67,8 @@ class decoder(nn.Module):
         self.to(device="cuda:{}".format(idx))
         return self
     '''
-
+    def initialize(self):
+        weight_init(self)
     
     def forward(self, x):
         H, W = self.base_size
