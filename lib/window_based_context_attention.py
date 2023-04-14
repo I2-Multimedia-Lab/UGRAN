@@ -63,21 +63,10 @@ class WCA(nn.Module):
         map_s = torch.sigmoid(map_s)
         p = map_s - self.threshold
         
-        fg = torch.clip(p, 0, 1) # foreground
-        bg = torch.clip(-p, 0, 1) # background
+        #fg = torch.clip(p, 0, 1) # foreground
+        #bg = torch.clip(-p, 0, 1) # background
         cg = self.threshold - torch.abs(p) # confusion area
-        '''
-        if map_l is not None:
-            map_l = F.interpolate(map_l, size=x.shape[-2:], mode='bilinear', align_corners=False)
-            map_l = torch.sigmoid(map_l)
-            lp = map_l - self.lthreshold
-            fp = torch.clip(lp, 0, 1) # foreground
-            bp = torch.clip(-lp, 0, 1) # background
 
-            context = [fg, bg, cg, fp, bp]
-        else:
-            context = [fg, bg, cg]
-        '''
         x_uncertain = x-cg
         
         x_windows = window_partition(x,self.window_size)
@@ -104,9 +93,11 @@ class WCA(nn.Module):
         x = self.conv_out2(x_cat)
         x = self.conv_out3(x)
         out = self.conv_out4(x)
-        #if map_s == None:
-        #    
-        #else: out = map_s
+
+        return x, out
+    
+    def forward_ablation(self,x, map_s,map_l=None):
+        out = self.conv_out4(x)
         return x, out
     
 def window_partition(x, window_size):

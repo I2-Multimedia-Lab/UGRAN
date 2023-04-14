@@ -44,7 +44,9 @@ class MFE(nn.Module):
         
         self.conv_cat = Conv2d(out_channel*3,out_channel,3)
         self.conv_res = Conv2d(in_channel, out_channel, 1)
-        #self.initialize()
+
+    def initialize(self):
+        weight_init(self)
 
     def forward(self, x_i, x_l=None, x_h=None):
         x = self.ci(x_i)
@@ -66,5 +68,8 @@ class MFE(nn.Module):
         x = self.relu(x_cat + self.conv_res(x_i))
 
         return x
-    def initialize(self):
-        weight_init(self)
+    
+    def forward_ablation(self, x_i, x_l=None, x_h=None):
+
+        x = self.conv_res(x_i)
+        return x
