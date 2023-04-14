@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from Models.swin import window_partition,window_reverse,WindowAttention
+from lib.swin import window_partition,window_reverse,WindowAttention
 from timm.models.layers import DropPath, to_2tuple, trunc_normal_
 
 class Mlp(nn.Module):

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from Models.modules import *
+from lib.modules import *
 #from .layers import *
 from .modules import *
 import math

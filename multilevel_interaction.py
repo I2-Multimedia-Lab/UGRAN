@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from timm.models.layers import DropPath
-from Models.modules import CrossAttention
+from lib.modules import CrossAttention
 class MultilevelInteractionBlock(nn.Module):
     r""" Multilevel Interaction Block. 
     

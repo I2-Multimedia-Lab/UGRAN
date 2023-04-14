@@ -566,9 +566,16 @@ class SwinTransformer(nn.Module):
                     param.requires_grad = False
 
     def initialize(self):
-        if self.pretrain_img_size == 384:
-            self.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
-
+        def _init_weights(m):
+            if isinstance(m, nn.Linear):
+                trunc_normal_(m.weight, std=.02)
+                if isinstance(m, nn.Linear) and m.bias is not None:
+                    nn.init.constant_(m.bias, 0)
+            elif isinstance(m, nn.LayerNorm):
+                nn.init.constant_(m.bias, 0)
+                nn.init.constant_(m.weight, 1.0)
+        self.apply(_init_weights)
+    '''
     def init_weights(self, pretrained=None):
         """Initialize the weights in backbone.
 
@@ -594,7 +601,7 @@ class SwinTransformer(nn.Module):
             self.apply(_init_weights)
         else:
             raise TypeError('pretrained must be a str or None')
-
+    '''
     def forward(self, x):
         """Forward function."""
         x = self.patch_embed(x)

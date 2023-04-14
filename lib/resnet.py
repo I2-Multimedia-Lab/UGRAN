@@ -69,7 +69,8 @@ class Bottleneck(nn.Module):
         self.conv3      = nn.Conv2d(planes, planes*4, kernel_size=1, bias=False)
         self.bn3        = nn.BatchNorm2d(planes*4)
         self.downsample = downsample
-
+    def initialize(self):
+        weight_init(self)
     def forward(self, x):
         out = F.relu(self.bn1(self.conv1(x)), inplace=True)
         out = F.relu(self.bn2(self.conv2(out)), inplace=True)
@@ -109,7 +110,7 @@ class ResNet(nn.Module):
         return out1,out2,out3,out4,out5
 
     def initialize(self):
-        self.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/resnet50.pth'), strict=False)
+        weight_init(self)
         
 '''
 

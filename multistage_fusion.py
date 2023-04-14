@@ -1,16 +1,16 @@
 import torch
 import torch.nn as nn
 from timm.models.layers import DropPath
-from Models.modules import MixedAttentionBlock
+from lib.modules import MixedAttentionBlock
 import torch.nn.functional as F
-#from Models.layers import *
-from Models.context_module import *
-from Models.attention_module import *
-from Models.decoder_module import *
-from Models.multiscale_feature_enhancement import MFE
-from Models.scale_spatial_consistent_attention import SSCA
-from Models.window_based_context_attention import WCA
-from Models.modules import *
+#from lib.layers import *
+from lib.context_module import *
+from lib.attention_module import *
+from lib.decoder_module import *
+from lib.multiscale_feature_enhancement import MFE
+from lib.scale_spatial_consistent_attention import SSCA
+from lib.window_based_context_attention import WCA
+from lib.modules import *
 class decoder(nn.Module):
     r""" Multistage decoder. 
     
@@ -60,6 +60,8 @@ class decoder(nn.Module):
         self.des = lambda x, size: F.interpolate(x, size=size, mode='nearest')
 
         #self.initialize()
+
+    '''
     def to(self, device):
         #self.image_pyramid.to(device)
         #self.transition0.to(device)
@@ -74,7 +76,7 @@ class decoder(nn.Module):
             
         self.to(device="cuda:{}".format(idx))
         return self
-    
+    '''
 
     
     def forward(self, x):

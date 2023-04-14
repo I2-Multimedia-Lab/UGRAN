@@ -4,6 +4,8 @@ import torch.utils.model_zoo as model_zoo
 import torch
 import torch.nn.functional as F
 
+from .modules import weight_init
+
 __all__ = ['Res2Net', 'res2net50_v1b',
            'res2net101_v1b', 'res2net50_v1b_26w_4s']
 
@@ -46,7 +48,8 @@ class Bottle2neck(nn.Module):
         self.stype = stype
         self.scale = scale
         self.width = width
-
+    def initialize(self):
+        weight_init(self)
     def forward(self, x):
         residual = x
 
@@ -214,8 +217,8 @@ class Res2Net(nn.Module):
 
         return out
     def initialize(self):
-        self.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/res2net50_v1b_26w_4s-3cf99910.pth'), strict=False)
-
+        weight_init(self)
+        
 def res2net50_v1b(pretrained=False, **kwargs):
     model = Res2Net(Bottle2neck, [3, 4, 6, 3], baseWidth=26, scale=4, **kwargs)
     if pretrained:
