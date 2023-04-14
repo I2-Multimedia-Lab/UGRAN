@@ -14,7 +14,7 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,train_size):
     epoch_loss1 = 0
     epoch_loss2 = 0
     epoch_loss3 = 0
-    epoch_loss4 = 0
+    #epoch_loss4 = 0
     loss_weights = [1, 1, 1, 1, 1]
     l = 0
 
@@ -36,6 +36,7 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,train_size):
         mask_1_8 = F.interpolate(mask_1_8,(H,W),mode='bilinear')
         mask_1_4 = F.interpolate(mask_1_4,(H,W),mode='bilinear')
         mask_1_2 = F.interpolate(mask_1_2,(H,W),mode='bilinear')
+
         #loss4  = F.binary_cross_entropy_with_logits(mask_1_16, label_1_16) + iou_loss(mask_1_16, label_1_16)
         loss3 = wbce(mask_1_8, label) + iou_loss(mask_1_8, label)
         loss2 = wbce(mask_1_4, label) + iou_loss(mask_1_4, label)
@@ -56,7 +57,7 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,train_size):
         #epoch_loss4 += loss4.cpu().data.item()
 
         progress_bar.set_postfix(loss=f'{epoch_loss0/(i+1):.3f}')
-    return epoch_loss1/l
+    return epoch_loss0/l
         
 def fit(model, train_dl, epochs=60, lr=1e-4,train_size = 384):
     save_dir = './loss.txt'
@@ -71,7 +72,7 @@ def fit(model, train_dl, epochs=60, lr=1e-4,train_size = 384):
         if epoch == 0:
             fh.write('\n'+str(datetime.datetime.now())+'\n')
             fh.write('Start record.\n')
-        fh.write(str(epoch+1) + ' epoch_loss: ' + str(loss) + '\n')
+        fh.write(str(epoch+1) + ' current lr: ' + str(scheduler.get_lr()) + ' epoch_loss: ' + str(loss) + '\n')
         if epoch+1 == epochs:
             fh.write(str(datetime.datetime.now())+'\n')
             fh.write('End record.\n')

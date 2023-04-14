@@ -5,7 +5,7 @@ from lib.resnet import ResNet
 from lib.t2t_vit import T2t_vit_t_14
 from lib.res2net_v1b import res2net50_v1b_26w_4s
 from multistage_fusion import decoder
-from multilevel_interaction import MultilevelInteractionBlock
+#from multilevel_interaction import MultilevelInteractionBlock
 from lib.modules import weight_init
 class M3Net(nn.Module):
     r""" Multilevel, Mixed and Multistage Attention Network for Salient Object Detection. 
