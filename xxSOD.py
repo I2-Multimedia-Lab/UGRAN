@@ -87,7 +87,7 @@ class M3Net(nn.Module):
 #from thop import profile
 if __name__ == '__main__':
     # Test
-    model = M3Net(dim=64,img_size=384,method='M3Net-S')
+    model = M3Net(dim=64,img_size=384,method='M3Net-R')
     #model.encoder.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/resnet50.pth'), strict=False)
                                              #swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
 

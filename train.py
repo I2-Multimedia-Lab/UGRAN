@@ -6,7 +6,7 @@ from data.dataloader import RGB_Dataset
 import os
 from torch.optim.lr_scheduler import _LRScheduler
 import datetime
-from train.loss import *
+from loss import *
 
 def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,train_size):
     epoch_total_loss = 0

@@ -32,7 +32,7 @@ class SSCA(nn.Module):
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         self.conv_out4 = Conv2d(depth, 1, 1)
 
-        self.forward = self._forward
+        self.forward = self._ablation
         
     def initialize(self):
         weight_init(self)

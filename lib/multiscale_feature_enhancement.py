@@ -46,7 +46,6 @@ class MFE(nn.Module):
         self.conv_res = Conv2d(in_channel, out_channel, 1)
         
         self.forward = self._forward
-
     def initialize(self):
         weight_init(self)
 
