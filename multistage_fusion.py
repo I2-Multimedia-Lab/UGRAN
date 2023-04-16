@@ -76,9 +76,9 @@ class decoder(nn.Module):
         x1,x2,x3,x4,x5 = x
         
         #x1 = self.context1(x1,x_h=x2) #4
-        x2 = self.context2(x2,x_h=x3) #4
-        x3 = self.context3(x3,x_h=x4) #8
-        x4 = self.context4(x4,x_h=x5) #16
+        x2 = self.context2(x2)#,x_h=x3) #4
+        x3 = self.context3(x3)#,x_h=x4) #8
+        x4 = self.context4(x4)#,x_h=x5) #16
         x5 = self.context5(x5) #32
 
         '''

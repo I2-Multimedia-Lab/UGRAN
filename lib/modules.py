@@ -383,6 +383,9 @@ class CropLayer(nn.Module):
         assert self.rows_to_crop >= 0
         assert self.cols_to_crop >= 0
 
+    def initialize(self):
+        weight_init(self)
+
     def forward(self, input):
         return input[:, :, self.rows_to_crop:-self.rows_to_crop, self.cols_to_crop:-self.cols_to_crop]
 

@@ -20,7 +20,7 @@ import transforms as trans
 from tqdm import tqdm
 #from branch import branch
 from xxSOD import M3Net
-def get_pred_dir(model, data_root = '/home/yy/datasets/', save_path = 'preds/',img_size = 384,methods = 'DUTS+DUT-O+ECSSD+HKU-IS+PASCAL-S+SOD'):
+def get_pred_dir(model, data_root = '/home/yy/datasets/', save_path = 'preds/',img_size = 384,methods = 'DUT-O+DUTS+ECSSD+HKU-IS+PASCAL-S+SOD'):
     batch_size = 1
     test_paths = methods.split('+')
     for dataset_setname in test_paths:
