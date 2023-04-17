@@ -318,7 +318,7 @@ def weight_init(module):
                 nn.init.constant_(m.bias, 0)
         elif isinstance(m, (nn.Sequential,nn.ModuleList)):
             weight_init(m)
-        elif isinstance(m, (nn.ReLU, nn.GELU, nn.Sigmoid, nn.PReLU, nn.AdaptiveAvgPool2d, nn.AdaptiveAvgPool1d, nn.Sigmoid, nn.Identity, nn.Upsample, nn.Dropout)):
+        elif isinstance(m, (nn.ReLU, nn.GELU, nn.Sigmoid, nn.PReLU, nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.AdaptiveAvgPool1d, nn.Sigmoid, nn.Identity, nn.Upsample, nn.Dropout)):
             pass
         else:
             m.initialize()
@@ -430,7 +430,7 @@ class asyConv(nn.Module):
                                       padding_mode=padding_mode)
             self.ver_bn = nn.BatchNorm2d(num_features=out_channels)
             self.hor_bn = nn.BatchNorm2d(num_features=out_channels)
-        self.initialize()
+        #self.initialize()
 
     def forward(self, input):
         if self.deploy:
@@ -448,3 +448,67 @@ class asyConv(nn.Module):
 
     def initialize(self):
         weight_init(self)
+
+class SE(nn.Module):
+    def __init__(self, dim, r):
+        super(SE, self).__init__()
+        self.se = nn.Sequential(
+            nn.Linear(dim,dim//r),
+            nn.GELU(),
+            nn.Linear(dim//r,dim)
+        )
+        
+    def initialize(self):
+        weight_init(self)
+
+    def forward(self, fea):
+        _,shape,_ = fea.shape
+        z = fea.transpose(1,2)
+        z = F.avg_pool1d(z,shape).transpose(1,2)
+        s = self.se(z)
+        s = torch.sigmoid(s)
+
+        return s*fea
+
+class GCT(nn.Module):
+    def __init__(self, num_channels, eps=1e-5):
+        super(GCT, self).__init__()
+        self.alpha = nn.Parameter(torch.ones(1, num_channels, 1, 1))
+        self.gamma = nn.Parameter(torch.zeros(1, num_channels, 1, 1))
+        self.beta = nn.Parameter(torch.zeros(1, num_channels, 1, 1))
+        self.eps = eps
+
+    def initialize(self):
+        weight_init(self)
+
+    def forward(self, x):
+        embedding = (x.pow(2).sum((2,3), keepdim=True) + self.eps).pow(0.5) * self.alpha
+        norm = self.gamma / (embedding.pow(2).mean(dim=1, keepdim=True) + self.eps).pow(0.5)
+        gate = 1. + torch.tanh(embedding * norm + self.beta)
+
+        return x * gate
+
+class ICE(nn.Module):
+    def __init__(self, num_channels=64, ratio=8):
+        super(ICE, self).__init__()
+        self.conv_cross = nn.Conv2d(num_channels, num_channels, kernel_size=3, stride=1, padding=1, bias=False)    
+        self.bn_cross = nn.BatchNorm2d(num_channels)
+        self.eps = 1e-5   
+        self.conv_mask = nn.Conv2d(num_channels, 1, kernel_size=1)#context Modeling
+        self.softmax = nn.Softmax(dim=2)
+        self.channel_add_conv = nn.Sequential(
+            nn.Conv2d(num_channels, num_channels // ratio, kernel_size=1),
+            nn.LayerNorm([num_channels // ratio, 1, 1]),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(num_channels // ratio, num_channels, kernel_size=1)
+        )
+        
+    def initialize(self):
+        weight_init(self)
+
+    def forward(self, x):
+        x = F.relu(self.bn_cross(self.conv_cross(x))) #[B, C, H, W]
+        context = (x.pow(2).sum((2,3), keepdim=True) + self.eps).pow(0.5) # [B, C, 1, 1]
+        channel_add_term = self.channel_add_conv(context)
+
+        return x * channel_add_term

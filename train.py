@@ -132,7 +132,7 @@ def training(args):
 
     train_dataset = RGB_Dataset(root=args.data_root, sets=['DUTS-TR'],img_size=args.img_size,mode='train')
     train_dl = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle = True, 
-                                               pin_memory=True,num_workers = 4
+                                               pin_memory=True,num_workers = 4,drop_last = True
                                                )
     
     model.cuda()
