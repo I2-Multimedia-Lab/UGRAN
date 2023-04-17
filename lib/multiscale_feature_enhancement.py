@@ -139,27 +139,26 @@ class MFE2(nn.Module):
 
         if h_channel != None:
             # channel transform
-            self.ch = Conv2d(h_channel, in_channel,3,relu=True)
+            self.ch = Conv2d(h_channel, in_channel,1,relu=True)
 
             # spatial transform
             self.sh = nn.Sequential(
                 nn.Upsample(size=self.stage_size,mode='bilinear'),
-                Conv2d(out_channel,out_channel,3)
+                #Conv2d(out_channel,out_channel,3)
                 )
         
         if l_channel != None:
             # channel transform
-            self.cl = Conv2d(l_channel, out_channel,3,relu=True)
+            self.cl = Conv2d(l_channel, out_channel,1,relu=True)
 
             # spatial transform
             self.sl = nn.Sequential(
                 nn.Upsample(size=self.stage_size,mode='bilinear'),
-                Conv2d(out_channel,out_channel,3)
+                #Conv2d(out_channel,out_channel,3)
                 )
 
         # diverse feature enhancement
         inter_channel = in_channel // 4
-
 
         self.branch0 = nn.Sequential(
                 Conv2d(in_channel, inter_channel, kernel_size=1, stride=1,relu=True),
@@ -178,13 +177,13 @@ class MFE2(nn.Module):
                 Conv2d(inter_channel, inter_channel, kernel_size=3, stride=1,  dilation=5, relu=False)
                 )
 
-
         self.ConvLinear = Conv2d(3*inter_channel, out_channel, kernel_size=1, stride=1, relu=False)
+        self.channel_att = GCT(3*inter_channel)
         self.shortcut = Conv2d(in_channel, out_channel, kernel_size=1, stride=1, relu=False)
         self.relu = nn.ReLU(inplace=False)
-
         
         self.forward = self._forward
+
     def initialize(self):
         weight_init(self)
 
@@ -195,6 +194,7 @@ class MFE2(nn.Module):
         x2 = self.branch2(x)
 
         out = torch.cat((x0,x1,x2),1)
+        #out = self.channel_att(out)
         out = self.ConvLinear(out)
         short = self.shortcut(x)
         out = self.relu(out + short)
@@ -206,7 +206,7 @@ class MFE2(nn.Module):
         x = self.conv_res(x_i)
         return x
     
-class MFE(nn.Module):
+class MFE3(nn.Module):
     """ Enhance the feature diversity.
     """
     def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
@@ -232,3 +232,115 @@ class MFE(nn.Module):
     def initialize(self):
         #pass
         weight_init(self)
+
+            
+class MFE(nn.Module):
+    def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
+        super(MFE, self).__init__()
+        reduction_dim = in_channel//4
+        bins = [1,2,3,6]
+        self.features = []
+        for bin in bins:
+            self.features.append(nn.Sequential(
+                nn.AdaptiveAvgPool2d(bin),
+                nn.Conv2d(in_channel, reduction_dim, kernel_size=1, bias=False),
+                nn.BatchNorm2d(reduction_dim),
+                nn.ReLU(inplace=True)
+            ))
+        self.features = nn.ModuleList(self.features)
+        self.ConvLinear = Conv2d(in_channel+4*reduction_dim, out_channel, kernel_size=1, stride=1, relu=True)
+    def initialize(self):
+        #pass
+        weight_init(self)
+
+    def forward(self, x):
+        x_size = x.size()
+        out = [x]
+        for f in self.features:
+            out.append(F.interpolate(f(x), x_size[2:], mode='bilinear', align_corners=True))
+        out = torch.cat(out, 1)
+        return self.ConvLinear(out)
+    
+class MFE5(nn.Module):
+    def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
+        layers=[64,48,64,64,96,96,32]
+        super(MFE,self).__init__()
+        self.branch1 = nn.Sequential(
+        nn.Conv2d(in_channel,layers[0],kernel_size=1,stride=1,padding=0 ,bias=False),
+        nn.BatchNorm2d(layers[0]),
+        nn.ReLU(inplace=True),
+        )
+        self.branch2 = nn.Sequential(
+        nn.Conv2d(in_channel,layers[1],1,stride=1,padding=0,bias=False),
+        nn.BatchNorm2d(layers[1]),
+        nn.ReLU(inplace=True),
+        nn.Conv2d(layers[1],layers[2],5,stride=1,padding=2,bias=False),
+        nn.BatchNorm2d(layers[2]),
+        nn.ReLU(True),
+        )
+        self.branch3 = nn.Sequential(
+        nn.Conv2d(in_channel,layers[3],kernel_size=1,stride=1,padding=0,bias=False),
+        nn.BatchNorm2d(layers[3]),
+        nn.ReLU(inplace=True),
+        nn.Conv2d(layers[3],layers[4],kernel_size=3,stride=1,padding=1,bias=False),
+        nn.BatchNorm2d(layers[4]),
+        nn.ReLU(inplace=True),
+        nn.Conv2d(layers[4],layers[5],kernel_size=3,stride=1,padding=1,bias=False),
+        nn.BatchNorm2d(layers[5]),
+        nn.ReLU(inplace=True),
+        )
+        self.branch4 = nn.Sequential(
+        nn.AvgPool2d(kernel_size=3,stride=1,padding=1),
+        nn.Conv2d(in_channel,layers[6],1,stride=1,padding=0,bias=False),
+        nn.BatchNorm2d(layers[6]),
+        nn.ReLU(inplace=True),
+        )
+        self.ConvLinear = Conv2d(layers[0]+layers[2]+layers[5]+layers[6], out_channel, kernel_size=1, stride=1, relu=True)
+    def initialize(self):
+        #pass
+        weight_init(self)
+
+    def forward(self,x):
+        b1 = self.branch1(x)
+        b2 = self.branch2(x)
+        b3 = self.branch3(x)
+        b4 = self.branch4(x)
+        out = torch.cat([b1,b2,b3,b4],dim=1)
+        return self.ConvLinear(out)
+    
+class MFE4(nn.Module):
+    def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
+        super(MFE,self).__init__()
+        depth = in_channel // 4
+        # global average pooling : init nn.AdaptiveAvgPool2d ;also forward torch.mean(,,keep_dim=True)
+        self.mean = nn.AdaptiveAvgPool2d((1, 1))
+        self.conv = nn.Conv2d(in_channel, depth, 1, 1)
+        # k=1 s=1 no pad
+        self.atrous_block1 = nn.Conv2d(in_channel, depth, 1, 1)
+        self.atrous_block6 = nn.Conv2d(in_channel, depth, 3, 1, padding=6, dilation=6)
+        self.atrous_block12 = nn.Conv2d(in_channel, depth, 3, 1, padding=12, dilation=12)
+        self.atrous_block18 = nn.Conv2d(in_channel, depth, 3, 1, padding=18, dilation=18)
+ 
+        self.conv_1x1_output = nn.Conv2d(depth * 5, out_channel, 1, 1)
+    def initialize(self):
+        #pass
+        weight_init(self)
+
+    def forward(self, x):
+        size = x.shape[2:]
+ 
+        image_features = self.mean(x)
+        image_features = self.conv(image_features)
+        image_features = F.upsample(image_features, size=size, mode='bilinear')
+ 
+        atrous_block1 = self.atrous_block1(x)
+ 
+        atrous_block6 = self.atrous_block6(x)
+ 
+        atrous_block12 = self.atrous_block12(x)
+ 
+        atrous_block18 = self.atrous_block18(x)
+ 
+        net = self.conv_1x1_output(torch.cat([image_features, atrous_block1, atrous_block6,
+                                              atrous_block12, atrous_block18], dim=1))
+        return net
