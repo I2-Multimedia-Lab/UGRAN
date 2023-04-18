@@ -45,7 +45,7 @@ class MFE0(nn.Module):
         self.conv_cat = Conv2d(out_channel*3,out_channel,3)
         self.conv_res = Conv2d(in_channel, out_channel, 1)
         
-        self.forward = self._forward
+        self.forward = self._ablation
     def initialize(self):
         weight_init(self)
 
@@ -124,7 +124,7 @@ class MFE1(nn.Module):
 
         return out
     
-class MFE2(nn.Module):
+class MFE(nn.Module):
     # Multilevel Feature Enhancement
     def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
         super(MFE, self).__init__()
@@ -178,7 +178,7 @@ class MFE2(nn.Module):
                 )
 
         self.ConvLinear = Conv2d(3*inter_channel, out_channel, kernel_size=1, stride=1, relu=False)
-        self.channel_att = GCT(3*inter_channel)
+        self.channel_att = SE(3*inter_channel)
         self.shortcut = Conv2d(in_channel, out_channel, kernel_size=1, stride=1, relu=False)
         self.relu = nn.ReLU(inplace=False)
         
@@ -194,7 +194,7 @@ class MFE2(nn.Module):
         x2 = self.branch2(x)
 
         out = torch.cat((x0,x1,x2),1)
-        #out = self.channel_att(out)
+        out = self.channel_att(out)
         out = self.ConvLinear(out)
         short = self.shortcut(x)
         out = self.relu(out + short)
@@ -234,7 +234,7 @@ class MFE3(nn.Module):
         weight_init(self)
 
             
-class MFE(nn.Module):
+class MFE6(nn.Module):
     def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
         super(MFE, self).__init__()
         reduction_dim = in_channel//4

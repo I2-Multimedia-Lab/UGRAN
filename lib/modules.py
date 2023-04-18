@@ -450,7 +450,7 @@ class asyConv(nn.Module):
         weight_init(self)
 
 class SE(nn.Module):
-    def __init__(self, dim, r):
+    def __init__(self, dim, r=16):
         super(SE, self).__init__()
         self.se = nn.Sequential(
             nn.Linear(dim,dim//r),

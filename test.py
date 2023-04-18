@@ -8,17 +8,14 @@ import numpy as np
 import cv2
 import torch
 import torch.nn as nn
-#from SOD import SOD
-from dataloader import get_loader
+
 from data.dataloader import RGB_Dataset
 from torch.autograd import Variable
 from torchvision import transforms
 import torch.nn.functional as F
 import transforms as trans
-#from vst_token import ImageDepthNet
-#from icon import ICON
 from tqdm import tqdm
-#from branch import branch
+
 from xxSOD import M3Net
 def get_pred_dir(model, data_root = '/home/yy/datasets/', save_path = 'preds/',img_size = 384,methods = 'DUT-O+DUTS+ECSSD+HKU-IS+PASCAL-S+SOD'):
     batch_size = 1
