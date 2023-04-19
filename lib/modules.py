@@ -462,13 +462,19 @@ class SE(nn.Module):
         weight_init(self)
 
     def forward(self, fea):
-        _,shape,_ = fea.shape
-        z = fea.transpose(1,2)
-        z = F.avg_pool1d(z,shape).transpose(1,2)
-        s = self.se(z)
-        s = torch.sigmoid(s)
+        b, c, _, _ = fea.size()  	# shape = [32, 64, 2000, 80]
+        
+        y = F.adaptive_avg_pool2d(fea,1)	# shape = [32, 64, 1, 1]
+        y = y.view(b, c)				# shape = [32,64]
+        
+        # 第1个线性层（含激活函数），即公式中的W1，其维度是[channel, channer/16], 其中16是默认的
+        y = self.se(y)				# shape = [32, 64] * [64, 4] = [32, 4]
+        
+        
+        y = y.view(b, c, 1, 1)			# shape = [32, 64, 1, 1]， 这个就表示上面公式的s, 即每个通道的权重
 
-        return s*fea
+        return fea*y
+
 
 class GCT(nn.Module):
     def __init__(self, num_channels, eps=1e-5):
