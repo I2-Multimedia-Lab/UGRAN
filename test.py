@@ -13,7 +13,6 @@ from data.dataloader import RGB_Dataset
 from torch.autograd import Variable
 from torchvision import transforms
 import torch.nn.functional as F
-import transforms as trans
 from tqdm import tqdm
 
 from xxSOD import M3Net
@@ -40,9 +39,9 @@ def get_pred_dir(model, data_root = '/home/yy/datasets/', save_path = 'preds/',i
             image_w, image_h = int(image_w[0]), int(image_h[0])
 
             pred = torch.sigmoid(mask_1_1)
-            transform = trans.Compose([
+            transform = transforms.Compose([
                 transforms.ToPILImage(),
-                trans.Scale((image_w, image_h))
+                transforms.Resize((image_h, image_w))
             ])
             pred = pred.squeeze(0)
             pred = transform(pred)

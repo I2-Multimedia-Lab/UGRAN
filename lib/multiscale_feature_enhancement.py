@@ -5,6 +5,7 @@ import torch.nn.functional as F
 #from .layers import *
 from .modules import *
 class MFE0(nn.Module):
+    # ori MFE
     # Multilevel Feature Enhancement
     def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
         super(MFE, self).__init__()
@@ -76,7 +77,7 @@ class MFE0(nn.Module):
         return x
 
 class MFE1(nn.Module):
-
+    # RFB
     def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None, stride=1, scale = 0.1):
         super(MFE, self).__init__()
         self.scale = scale
@@ -125,6 +126,7 @@ class MFE1(nn.Module):
         return out
     
 class MFE2(nn.Module):
+    # MFE with RFB+atrconv
     # Multilevel Feature Enhancement
     def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
         super(MFE, self).__init__()
@@ -178,7 +180,7 @@ class MFE2(nn.Module):
                 )
 
         self.ConvLinear = Conv2d(3*inter_channel, out_channel, kernel_size=1, stride=1, relu=False)
-        self.channel_att = GCT(3*inter_channel)
+        #self.channel_att = GCT(3*inter_channel)
         self.shortcut = Conv2d(in_channel, out_channel, kernel_size=1, stride=1, relu=False)
         self.relu = nn.ReLU(inplace=False)
         
@@ -194,7 +196,7 @@ class MFE2(nn.Module):
         x2 = self.branch2(x)
 
         out = torch.cat((x0,x1,x2),1)
-        out = self.channel_att(out)
+        #out = self.channel_att(out)
         out = self.ConvLinear(out)
         short = self.shortcut(x)
         out = self.relu(out + short)
@@ -207,6 +209,7 @@ class MFE2(nn.Module):
         return x
     
 class MFE3(nn.Module):
+    # DFA
     """ Enhance the feature diversity.
     """
     def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
@@ -235,6 +238,7 @@ class MFE3(nn.Module):
 
             
 class MFE4(nn.Module):
+    # PSP
     def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
         super(MFE, self).__init__()
         reduction_dim = in_channel//4
@@ -262,6 +266,7 @@ class MFE4(nn.Module):
         return self.ConvLinear(out)
     
 class MFE5(nn.Module):
+    # inception
     def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
         layers=[64,48,64,64,96,96,32]
         super(MFE,self).__init__()
@@ -309,6 +314,7 @@ class MFE5(nn.Module):
         return self.ConvLinear(out)
     
 class MFE6(nn.Module):
+    # ASPP
     def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
         super(MFE,self).__init__()
         depth = in_channel // 4
@@ -345,7 +351,8 @@ class MFE6(nn.Module):
                                               atrous_block12, atrous_block18], dim=1))
         return net
 
-class MFE(nn.Module):
+class MFE7(nn.Module):
+    # SE test
     # Multilevel Feature Enhancement
     def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
         super(MFE, self).__init__()
@@ -392,15 +399,20 @@ class MFE(nn.Module):
                 )
         self.branch2 = nn.Sequential(
                 Conv2d(in_channel, inter_channel, kernel_size=1, stride=1,relu=True),
-                Conv2d(inter_channel, inter_channel, kernel_size=3, stride=1, dilation=2, relu=False)
+                asyConv(in_channels=inter_channel, out_channels=inter_channel, kernel_size=5, stride=1, padding=2, dilation=1, groups=1, padding_mode='zeros', deploy=False),
+                nn.ReLU(),
                 )
         self.branch3 = nn.Sequential(
+                Conv2d(in_channel, inter_channel, kernel_size=1, stride=1,relu=True),
+                Conv2d(inter_channel, inter_channel, kernel_size=3, stride=1, dilation=2, relu=False)
+                )
+        self.branch4 = nn.Sequential(
                 Conv2d(in_channel, inter_channel, kernel_size=1, stride=1,relu=True),
                 Conv2d(inter_channel, inter_channel, kernel_size=3, stride=1, dilation=4, relu=False)
                 )
 
-        self.ConvLinear = Conv2d(4*inter_channel, out_channel, kernel_size=1, stride=1, relu=False)
-        self.channel_att = SE(4*inter_channel)
+        self.ConvLinear = Conv2d(5*inter_channel, out_channel, kernel_size=1, stride=1, relu=False)
+        self.channel_att = GCT(5*inter_channel)
         self.shortcut = Conv2d(in_channel, out_channel, kernel_size=1, stride=1, relu=False)
         self.relu = nn.ReLU(inplace=False)
         
@@ -415,15 +427,159 @@ class MFE(nn.Module):
         x1 = self.branch1(x)
         x2 = self.branch2(x)
         x3 = self.branch3(x)
+        x4 = self.branch4(x)
 
-        out = torch.cat((x0,x1,x2,x3),1)
+        out = torch.cat((x0,x1,x2,x3,x4),1)
+        out,w = self.channel_att(out)
+        out = self.ConvLinear(out)
+        short = self.shortcut(x)
+        out = self.relu(out + short)
+        
+        return out,w
+    def _ablation(self, x_i, x_l=None, x_h=None):
+
+        x = self.shortcut(x_i)
+        return x
+    
+class MFE(nn.Module):
+    # MFE_l
+    # Multilevel Feature Enhancement
+    def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
+        super(MFE, self).__init__()
+        self.relu = nn.ReLU(True)
+        if base_size is not None and stage is not None:
+            self.stage_size = (base_size[0] // (2 ** stage), base_size[1] // (2 ** stage))
+        else:
+            self.stage_size = None
+
+        if h_channel != None:
+            # channel transform
+            self.ch = Conv2d(h_channel, in_channel,1,relu=True)
+
+            # spatial transform
+            self.sh = nn.Sequential(
+                nn.Upsample(size=self.stage_size,mode='bilinear'),
+                #Conv2d(out_channel,out_channel,3)
+                )
+        
+        if l_channel != None:
+            # channel transform
+            self.cl = Conv2d(l_channel, out_channel,1,relu=True)
+
+            # spatial transform
+            self.sl = nn.Sequential(
+                nn.Upsample(size=self.stage_size,mode='bilinear'),
+                #Conv2d(out_channel,out_channel,3)
+                )
+
+        # diverse feature enhancement
+        inter_channel = in_channel // 4
+
+        self.branch0 = nn.Sequential(
+                Conv2d(in_channel, inter_channel, kernel_size=1, stride=1,relu=True),
+                Conv2d(inter_channel, inter_channel, kernel_size=3, stride=1,relu=False)
+                )
+        self.branch1 = nn.Sequential(
+                Conv2d(in_channel, inter_channel, kernel_size=1, stride=1,relu=True),
+                asyConv(in_channels=inter_channel, out_channels=inter_channel, kernel_size=3, stride=1, padding=1, dilation=1, groups=1, padding_mode='zeros', deploy=False),
+                #nn.ReLU(),
+                )
+        self.branch2 = nn.Sequential(
+                Conv2d(in_channel, inter_channel, kernel_size=1, stride=1,relu=True),
+                Conv2d(inter_channel, inter_channel, kernel_size=3, stride=1, dilation=2, relu=False)
+                )
+
+        self.ConvLinear = Conv2d(3*inter_channel, out_channel, kernel_size=1, stride=1, relu=False)
+        #self.channel_att = GCT(3*inter_channel)
+        self.shortcut = Conv2d(in_channel, out_channel, kernel_size=1, stride=1, relu=False)
+        self.relu = nn.ReLU(inplace=False)
+        
+        self.forward = self._forward
+
+    def initialize(self):
+        weight_init(self)
+
+    def _forward(self, x_i, x_l=None, x_h=None):
+        x = x_i
+        
+        x0 = self.branch0(x)
+        x1 = self.branch1(x)
+        x2 = self.branch2(x)
+
+        out = torch.cat((x0,x1,x2),1)
+        #out = self.channel_att(out)
+        out = self.ConvLinear(out)
+        short = self.shortcut(x)
+        out = self.relu(out + short)
+        
+        return out
+    def _ablation(self, x_i, x_l=None, x_h=None):
+
+        x = self.shortcut(x_i)
+        return x
+
+class MFE_h(nn.Module):
+    # SE test
+    # Multilevel Feature Enhancement
+    def __init__(self, in_channel, l_channel = None, h_channel = None, out_channel = 64, base_size=None, stage=None):
+        super(MFE_h, self).__init__()
+        self.relu = nn.ReLU(True)
+        if base_size is not None and stage is not None:
+            self.stage_size = (base_size[0] // (2 ** stage), base_size[1] // (2 ** stage))
+        else:
+            self.stage_size = None
+
+        if h_channel != None:
+            # channel transform
+            self.ch = Conv2d(h_channel, in_channel,1,relu=True)
+
+            # spatial transform
+            self.sh = nn.Sequential(
+                nn.Upsample(size=self.stage_size,mode='bilinear'),
+                #Conv2d(out_channel,out_channel,3)
+                )
+        
+        if l_channel != None:
+            # channel transform
+            self.cl = Conv2d(l_channel, out_channel,1,relu=True)
+
+            # spatial transform
+            self.sl = nn.Sequential(
+                nn.Upsample(size=self.stage_size,mode='bilinear'),
+                #Conv2d(out_channel,out_channel,3)
+                )
+
+        # diverse feature enhancement
+        inter_channel = in_channel // 4
+
+        self.branch0 = nn.Sequential(
+                Conv2d(in_channel, inter_channel, kernel_size=1, stride=1,relu=True),
+                Conv2d(inter_channel, inter_channel, kernel_size=3, stride=1,relu=False)
+                )
+
+        self.ConvLinear = Conv2d(inter_channel, out_channel, kernel_size=1, stride=1, relu=False)
+        self.channel_att = GCT(inter_channel)
+        self.shortcut = Conv2d(in_channel, out_channel, kernel_size=1, stride=1, relu=False)
+        self.relu = nn.ReLU(inplace=False)
+        
+        self.forward = self._forward
+
+    def initialize(self):
+        weight_init(self)
+
+    def _forward(self, x_i, x_l=None, x_h=None):
+        x = x_i
+        
+        x0 = self.branch0(x)
+
+
+        out = torch.cat((x0),1)
         out = self.channel_att(out)
         out = self.ConvLinear(out)
         short = self.shortcut(x)
         out = self.relu(out + short)
         
         return out
-    
     def _ablation(self, x_i, x_l=None, x_h=None):
 
         x = self.shortcut(x_i)

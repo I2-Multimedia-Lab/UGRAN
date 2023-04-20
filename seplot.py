@@ -29,14 +29,16 @@ l1 = []
 l2 = []
 l3 = []
 l4 = []
+l5 = []
 threshold=512
 for i in range(0,cnt):
     l1.append(np.average(l[i][0:threshold]))
     l2.append(np.average(l[i][threshold:2*threshold]))
     l3.append(np.average(l[i][2*threshold:3*threshold]))
     l4.append(np.average(l[i][3*threshold:4*threshold]))
-ll = np.concatenate([l1,l2,l3,l4],axis=0)
-x = np.arange(1,801)
-size = np.ones(801)
+    l5.append(np.average(l[i][4*threshold:5*threshold]))
+ll = np.concatenate([l1,l2,l3,l4,l5],axis=0)
+x = np.arange(1,1001)
+size = np.ones(1001)
 plt.scatter(x,ll,sizes=size)
-plt.savefig('se5.png')
+plt.savefig('se54.png')
