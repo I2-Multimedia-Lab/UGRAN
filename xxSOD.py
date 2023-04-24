@@ -90,7 +90,7 @@ if __name__ == '__main__':
     model = M3Net(dim=64,img_size=384,method='M3Net-R')
     #model.encoder.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/resnet50.pth'), strict=False)
                                              #swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
-
+    #model.load_state_dict(torch.load('/mnt/ssd/yy/xxSOD/savepth/M3Net-R_single.pth'))
     model.cuda()
     
     f = torch.randn((1,3,384,384))

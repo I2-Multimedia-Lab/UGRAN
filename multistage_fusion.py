@@ -4,9 +4,6 @@ from timm.models.layers import DropPath
 from lib.modules import MixedAttentionBlock
 import torch.nn.functional as F
 #from lib.layers import *
-from lib.context_module import *
-from lib.attention_module import *
-from lib.decoder_module import *
 from lib.multiscale_feature_enhancement import MFE
 from lib.scale_spatial_consistent_attention import SSCA
 from lib.window_based_context_attention import WCA
