@@ -185,7 +185,7 @@ class MFE(nn.Module):
         self.shortcut = Conv2d(in_channel, out_channel, kernel_size=1, stride=1, relu=False)
         self.relu = nn.ReLU(inplace=False)
         
-        self.forward = self._forward
+        self.forward = self._ablation
 
     def initialize(self):
         weight_init(self)

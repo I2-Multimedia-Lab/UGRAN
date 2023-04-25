@@ -32,7 +32,7 @@ class SSCA(nn.Module):
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         self.conv_out4 = Conv2d(depth, 1, 1)
 
-        self.forward = self._ablation
+        self.forward = self._forward
         
     def initialize(self):
         weight_init(self)
@@ -159,7 +159,7 @@ class SABlock(nn.Module):
 
     def forward(self, x, H, W):
         x = self.drop_path(self.attn(self.norm1(x), H, W))
-        #x = x + self.drop_path(self.mlp(self.norm2(x), H, W))
+        x = x + self.drop_path(self.mlp(self.norm2(x), H, W))
 
         return x
 
