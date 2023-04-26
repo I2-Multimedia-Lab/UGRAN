@@ -13,6 +13,8 @@ class Mlp(nn.Module):
         self.act = act_layer()
         self.fc2 = nn.Linear(hidden_features, out_features)
         self.drop = nn.Dropout(drop)
+    def initialize(self):
+        weight_init(self)
 
     def forward(self, x):
         x = self.fc1(x)
@@ -38,6 +40,8 @@ class Attention(nn.Module):
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj = nn.Linear(dim, dim)
         self.proj_drop = nn.Dropout(proj_drop)
+    def initialize(self):
+        weight_init(self)
 
     def forward(self, x):
         B, N, C = x.shape
@@ -144,7 +148,33 @@ class Block(nn.Module):
         flops += self.dim*N
         return flops
 
+class AttentionBlock(nn.Module):
+    # Remove FFN
+    def __init__(self, dim, num_heads, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
+                 drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm):
+        super().__init__()
+        self.norm1 = norm_layer(dim)
+        self.dim = dim
+        self.attn = Attention(
+            dim, num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale, attn_drop=attn_drop, proj_drop=drop)
+        self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
+        self.norm2 = norm_layer(dim)
+        mlp_hidden_dim = int(dim * mlp_ratio)
+        self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
+    def initialize(self):
+        weight_init(self)
 
+    def forward(self, x):
+        x = x + self.drop_path(self.attn(self.norm1(x)))
+        x = x + self.drop_path(self.mlp(self.norm2(x)))
+        return x
+    def flops(self,N):
+        flops = 0
+        #att
+        flops += self.attn.flops(N)
+        #norm
+        flops += self.dim*N
+        return flops
 
 class WindowAttentionBlock(nn.Module):
     r""" Based on Swin Transformer Block, We remove FFN. 
