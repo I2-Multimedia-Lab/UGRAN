@@ -22,7 +22,7 @@ class SSCA(nn.Module):
         self.channel_trans = Conv2d(in_channel,dim,1,bn=False)
         self.norm = nn.LayerNorm(dim)
         self.blocks = nn.ModuleList([
-            AttentionBlock(dim=dim, num_heads=num_heads, mlp_ratio=3., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
+            WABlock(dim=dim, num_heads=num_heads,input_resolution=[base_size[0]//(2**stage),base_size[1]//(2**stage)],window_size=12, mlp_ratio=3., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0.,
                  drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm)
             for i in range(stacked)])
         '''
