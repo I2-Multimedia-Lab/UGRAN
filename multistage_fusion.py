@@ -7,6 +7,7 @@ import torch.nn.functional as F
 from lib.multiscale_feature_enhancement import MFE
 from lib.scale_spatial_consistent_attention import SSCA
 from lib.window_based_context_attention import WCA
+from lib.multilevel_interaction_attention import MIA
 from lib.modules import *
 class decoder(nn.Module):
     r""" Multistage decoder. 
@@ -24,15 +25,22 @@ class decoder(nn.Module):
         self.base_size = base_size
         
         #self.context1 = MFE(in_channel=self.in_channels[0],h_channel=self.in_channels[1], out_channel = self.depth, base_size=self.base_size, stage=2)
+        '''
         self.context2 = MFE(in_channel=self.in_channels[1],l_channel=self.in_channels[0],h_channel=self.in_channels[2], out_channel=self.depth, base_size=self.base_size, stage=2)
         self.context3 = MFE(in_channel=self.in_channels[2],l_channel=self.in_channels[1],h_channel=self.in_channels[3], out_channel=self.depth, base_size=self.base_size, stage=3)
         self.context4 = MFE(in_channel=self.in_channels[3],l_channel=self.in_channels[2],h_channel=self.in_channels[4], out_channel=self.depth, base_size=self.base_size, stage=4)
         self.context5 = MFE(in_channel=self.in_channels[4],l_channel=self.in_channels[3],out_channel=self.depth, base_size=self.base_size, stage=5)
+        '''
+        self.context2 = MIA(dim=in_channels[1],dim1=None,dim2=None,embed_dim=depth,num_heads=1,mlp_ratio=3)
+        self.context3 = MIA(dim=in_channels[2],dim1=None,dim2=None,embed_dim=depth*2,num_heads=2,mlp_ratio=3)
+        self.context4 = MIA(dim=in_channels[3],dim1=None,dim2=None,embed_dim=depth*4,num_heads=4,mlp_ratio=3)
+        self.context5 = MIA(dim=in_channels[4],dim1=None,dim2=None,embed_dim=depth*8,num_heads=8,mlp_ratio=3)
 
+        #'''
         #self.decoder = PAA_d(self.depth * 3, depth=self.depth, base_size=base_size, stage=2)
-        self.fusion4 = SSCA(self.depth*2,dim=self.in_channels[3],num_heads=4,depth=self.depth,stage=4)
-        self.fusion3 = SSCA(self.depth*2,dim=self.in_channels[2],num_heads=2,depth=self.depth,stage=3)
-        self.fusion2 = SSCA(self.depth*2,dim=self.in_channels[1],num_heads=1,depth=self.depth,stage=2)
+        self.fusion4 = SSCA(in_channel=depth*12,dim=depth*8,depth=depth*4,num_heads=4,stage=4)
+        self.fusion3 = SSCA(in_channel=depth*6,dim=depth*4,depth=depth*2,num_heads=2,stage=3)
+        self.fusion2 = SSCA(in_channel=depth*3,dim=depth*2,depth=depth,num_heads=1,stage=2)
         #self.fusion1 = SSCA(self.depth*2,dim=self.in_channels[1],depth=self.depth,stage=1)
         self.proj = Conv2d(depth,1,1)
 

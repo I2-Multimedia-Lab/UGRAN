@@ -8,7 +8,7 @@ import math
     
 class SSCA(nn.Module):
     # Scale Spatial Consistent Attention
-    def __init__(self, in_channel, depth, dim, num_heads=1, stacked=1, base_size=[384,384], stage=1):
+    def __init__(self, in_channel, depth, dim, num_heads=1, stacked=2, base_size=[384,384], stage=1):
         super(SSCA, self).__init__()
         
         if base_size is not None and stage is not None:
@@ -22,22 +22,17 @@ class SSCA(nn.Module):
         self.channel_trans = Conv2d(in_channel,dim,1,bn=False)
         self.norm = nn.LayerNorm(dim)
         self.blocks = nn.ModuleList([
-            WABlock(dim=dim, num_heads=num_heads,input_resolution=[base_size[0]//(2**stage),base_size[1]//(2**stage)],window_size=12, mlp_ratio=3., qkv_bias=True, qk_scale=None, drop=0., attn_drop=0.,
-                 drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm)
-            for i in range(stacked)])
-        '''
-        self.blocks = nn.ModuleList([
             SABlock(dim=dim, num_heads=num_heads, mlp_ratio=3., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
                  drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm, sr_ratio=self.ratio,)
             for i in range(stacked)])
-        '''
+    
         self.conv_out1 = Conv2d(dim,depth,3,relu=True)
         
         #self.conv_out2 = Conv2d(dim, dim, 3, relu=True)
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         self.conv_out4 = Conv2d(depth, 1, 1)
 
-        self.forward = self._forward
+        self.forward = self._ablation
         
     def initialize(self):
         weight_init(self)
@@ -48,7 +43,7 @@ class SSCA(nn.Module):
         B,C,H,W = x.shape
         x_att = x.reshape(B,C,-1).transpose(1,2)
         for blk in self.blocks:
-            x_att = blk(x_att)
+            x_att = blk(x_att,H,W)
         x_att = x_att.transpose(1,2).reshape(B,C,H,W)
 
         x = x_att
@@ -74,7 +69,8 @@ class SA(nn.Module):
         self.ratio = sr_ratio
         self.scale = qk_scale if qk_scale != None else dim ** -0.5
         self.spatial_reduce = nn.Sequential(
-            nn.Conv2d(dim,dim,self.ratio,self.ratio),
+            nn.AvgPool2d(self.ratio,self.ratio),
+            nn.Conv2d(dim,dim,1,1),
             nn.BatchNorm2d(dim),
         )
         self.norm = nn.LayerNorm(dim)
