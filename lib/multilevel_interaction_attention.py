@@ -37,7 +37,7 @@ class MIA(nn.Module):
             )
         if self.dim2:
             #self.ca2 = SE(dim=dim2)
-            self.interact2 = CrossAttention(dim1 = dim,dim2 = dim2,dim = embed_dim,num_heads=num_heads,qkv_bias=qkv_bias,qk_scale=qk_scale,attn_drop=attn_drop,proj_drop=drop)
+            self.interact2 = CrossAttention(dim1 = embed_dim,dim2 = dim2,dim = embed_dim,num_heads=num_heads,qkv_bias=qkv_bias,qk_scale=qk_scale,attn_drop=attn_drop,proj_drop=drop)
             self.norm2 = norm_layer(dim2)
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
