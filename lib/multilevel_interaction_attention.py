@@ -21,13 +21,20 @@ class MIA(nn.Module):
         self.dim1 = dim1
         self.dim2 = dim2
 
-        self.norm0 = norm_layer(dim)
+        self.norm0 = norm_layer(embed_dim)
         self.ca = SE(dim=dim)
         self.ct = Conv2d(dim,embed_dim,1,bn=False)
         if self.dim1:
             #self.ca1 = SE(dim=dim1)
-            self.interact1 = CrossAttention(dim1 = dim,dim2 = dim1,dim = embed_dim,num_heads=num_heads,qkv_bias=qkv_bias,qk_scale=qk_scale,attn_drop=attn_drop,proj_drop=drop)
+            self.interact1 = CrossAttention(dim1 = embed_dim,dim2 = dim1,dim = embed_dim,num_heads=num_heads,qkv_bias=qkv_bias,qk_scale=qk_scale,attn_drop=attn_drop,proj_drop=drop)
             self.norm1 = norm_layer(dim1)
+
+            self.norm = nn.LayerNorm(embed_dim)
+            self.mlp = nn.Sequential(
+                nn.Linear(embed_dim, embed_dim*mlp_ratio),
+                act_layer(),
+                nn.Linear(embed_dim*mlp_ratio, embed_dim),
+            )
         if self.dim2:
             #self.ca2 = SE(dim=dim2)
             self.interact2 = CrossAttention(dim1 = dim,dim2 = dim2,dim = embed_dim,num_heads=num_heads,qkv_bias=qkv_bias,qk_scale=qk_scale,attn_drop=attn_drop,proj_drop=drop)
@@ -35,35 +42,33 @@ class MIA(nn.Module):
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
-        self.norm = nn.LayerNorm(dim)
-        self.mlp = nn.Sequential(
-            nn.Linear(dim, dim*mlp_ratio),
-            act_layer(),
-            nn.Linear(dim*mlp_ratio, dim),
-        )
-        self.forward = self._ablation
+        
+        self.forward = self._forward
     def initialize(self):
         weight_init(self)
 
     def _forward(self,fea,fea_1=None,fea_2=None):
-        B,C,H,W = fea.shape
-        fea = fea.reshape(B,C,-1).transpose(1,2)
-        fea = self.norm0(fea)
+        fea = self.ca(fea)
+        fea = self.ct(fea)
         if self.dim1:
+            B,C,H,W = fea.shape
+            fea = fea.reshape(B,C,-1).transpose(1,2)
+            fea = self.norm0(fea)
+            fea_1 = fea_1.reshape(B,C*2,-1).transpose(1,2)
             fea_1 = self.norm1(fea_1)
             fea_1 = self.interact1(fea,fea_1)
-             
-        if self.dim2:
-            fea_2 = self.norm2(fea_2)
-            fea_2 = self.interact2(fea,fea_2)
-            fea = fea + fea_2    
+                
+            if self.dim2:
+                fea_2 = fea_2.reshape(B,C*4,-1).transpose(1,2)
+                fea_2 = self.norm2(fea_2)
+                fea_2 = self.interact2(fea,fea_2)
+                fea = fea + fea_2    
 
-        if self.dim1:
             fea = fea + fea_1 
-        if self.dim2:
-            fea = fea + fea_2 
-        fea = fea + self.drop_path(self.mlp(self.norm(fea)))
-        fea = fea.transpose(1,2).reshape(B,C,H,W)
+            if self.dim2:
+                fea = fea + fea_2 
+            fea = fea + self.drop_path(self.mlp(self.norm(fea)))
+            fea = fea.transpose(1,2).reshape(B,C,H,W)
         return fea
     
     def _ablation(self,fea,fea_1=None,fea_2=None):

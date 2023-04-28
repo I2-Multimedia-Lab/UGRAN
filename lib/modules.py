@@ -87,7 +87,8 @@ class CrossAttention(nn.Module):
 
         self.attn_drop = nn.Dropout(attn_drop)
         self.proj_drop = nn.Dropout(proj_drop)
-
+    def initialize(self):
+        weight_init(self)
     def forward(self, fea, depth_fea):
         _, N1, _ = fea.shape
         B, N, _ = depth_fea.shape
