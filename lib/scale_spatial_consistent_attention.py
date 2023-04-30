@@ -69,8 +69,7 @@ class SA(nn.Module):
         self.ratio = sr_ratio
         self.scale = qk_scale if qk_scale != None else dim ** -0.5
         self.spatial_reduce = nn.Sequential(
-            nn.AvgPool2d(self.ratio,self.ratio),
-            nn.Conv2d(dim,dim,1,1),
+            nn.Conv2d(dim,dim,self.ratio,self.ratio),
             nn.BatchNorm2d(dim),
         )
         self.norm = nn.LayerNorm(dim)

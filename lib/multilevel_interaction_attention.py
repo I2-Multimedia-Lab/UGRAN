@@ -13,13 +13,14 @@ class MIA(nn.Module):
         mlp_ratio (float): Ratio of mlp hidden dim to embedding dim.
     """
     
-    def __init__(self,dim,dim1=None,dim2=None,embed_dim = 384,num_heads = 6,mlp_ratio = 3., qkv_bias = False, qk_scale = None,drop = 0.,attn_drop = 0.,drop_path = 0.,act_layer=nn.GELU, norm_layer=nn.LayerNorm):
+    def __init__(self,dim,dim1=None,dim2=None,dim3=None,embed_dim = 384,num_heads = 6,mlp_ratio = 3., qkv_bias = False, qk_scale = None,drop = 0.,attn_drop = 0.,drop_path = 0.,act_layer=nn.GELU, norm_layer=nn.LayerNorm):
         super(MIA, self).__init__()
         self.dim = dim
         self.mlp_ratio = mlp_ratio
 
         self.dim1 = dim1
         self.dim2 = dim2
+        self.dim3 = dim3
 
         self.norm0 = norm_layer(embed_dim)
         self.ca = SE(dim=dim)
@@ -39,6 +40,10 @@ class MIA(nn.Module):
             #self.ca2 = SE(dim=dim2)
             self.interact2 = CrossAttention(dim1 = embed_dim,dim2 = dim2,dim = embed_dim,num_heads=num_heads,qkv_bias=qkv_bias,qk_scale=qk_scale,attn_drop=attn_drop,proj_drop=drop)
             self.norm2 = norm_layer(dim2)
+        if self.dim3:
+            #self.ca2 = SE(dim=dim2)
+            self.interact3 = CrossAttention(dim1 = embed_dim,dim2 = dim3,dim = embed_dim,num_heads=num_heads,qkv_bias=qkv_bias,qk_scale=qk_scale,attn_drop=attn_drop,proj_drop=drop)
+            self.norm3 = norm_layer(dim3)
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
 
@@ -47,7 +52,7 @@ class MIA(nn.Module):
     def initialize(self):
         weight_init(self)
 
-    def _forward(self,fea,fea_1=None,fea_2=None):
+    def _forward(self,fea,fea_1=None,fea_2=None,fea_3=None):
         fea = self.ca(fea)
         fea = self.ct(fea)
         if self.dim1:
@@ -62,11 +67,15 @@ class MIA(nn.Module):
                 fea_2 = fea_2.reshape(B,C*4,-1).transpose(1,2)
                 fea_2 = self.norm2(fea_2)
                 fea_2 = self.interact2(fea,fea_2)
-                fea = fea + fea_2    
-
+            if self.dim3:
+                fea_3 = fea_3.reshape(B,C*8,-1).transpose(1,2)
+                fea_3 = self.norm3(fea_3)
+                fea_3 = self.interact3(fea,fea_3)
             fea = fea + fea_1 
             if self.dim2:
-                fea = fea + fea_2 
+                fea = fea + fea_2
+            if self.dim3:
+                fea = fea + fea_3
             fea = fea + self.drop_path(self.mlp(self.norm(fea)))
             fea = fea.transpose(1,2).reshape(B,C,H,W)
         return fea
