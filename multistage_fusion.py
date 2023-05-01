@@ -34,13 +34,13 @@ class decoder(nn.Module):
         self.context5 = MIA(dim=in_channels[4],dim1=None,dim2=None,embed_dim=depth*8,num_heads=8,mlp_ratio=3)
         self.context4 = MIA(dim=in_channels[3],dim1=depth*8,dim2=None,embed_dim=depth*4,num_heads=4,mlp_ratio=3)
         self.context3 = MIA(dim=in_channels[2],dim1=depth*4,dim2=depth*8,embed_dim=depth*2,num_heads=2,mlp_ratio=3)
-        self.context2 = MIA(dim=in_channels[1],dim1=depth*2,dim2=depth*4,dim3=depth*8,embed_dim=depth,num_heads=1,mlp_ratio=3)
+        self.context2 = MIA(dim=in_channels[1],dim1=depth*2,dim2=depth*4,embed_dim=depth,num_heads=1,mlp_ratio=3)
 
         #'''
         #self.decoder = PAA_d(self.depth * 3, depth=self.depth, base_size=base_size, stage=2)
-        self.fusion4 = SSCA(in_channel=depth*12,dim=depth*8,depth=depth*4,num_heads=4,stage=4)
-        self.fusion3 = SSCA(in_channel=depth*6,dim=depth*4,depth=depth*2,num_heads=2,stage=3)
-        self.fusion2 = SSCA(in_channel=depth*3,dim=depth*2,depth=depth,num_heads=1,stage=2)
+        self.fusion4 = SSCA(in_channel=depth*12,depth=depth*4,dim=depth*8,num_heads=4,stacked=2,stage=4)
+        self.fusion3 = SSCA(in_channel=depth*6,depth=depth*2,dim=depth*4,num_heads=2,stacked=2,stage=3)
+        self.fusion2 = SSCA(in_channel=depth*3,depth=depth,dim=depth*2,num_heads=1,stacked=2,stage=2)
         #self.fusion1 = SSCA(self.depth*2,dim=self.in_channels[1],depth=self.depth,stage=1)
         self.proj = Conv2d(depth,1,1)
 
@@ -83,7 +83,7 @@ class decoder(nn.Module):
         x5 = self.context5(x5) #32
         x4 = self.context4(x4,x5)#,x_h=x5) #16
         x3 = self.context3(x3,x4,x5)#,x_h=x4) #8
-        x2 = self.context2(x2,x3,x4,x5)#,x_h=x3) #4
+        x2 = self.context2(x2,x3,x4)#,x_h=x3) #4
         #x1 = self.context1(x1,x_h=x2) #4
 
         '''

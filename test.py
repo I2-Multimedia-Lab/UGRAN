@@ -56,7 +56,7 @@ def get_pred_dir(model, data_root = '/home/yy/datasets/', save_path = 'preds/',i
             #thread = threading.Thread(target = save_p,args = (pred.shape[0],pred,image_w,image_h,image_path,dataset_setname,save_path))
             #thread.start()
 
-def testing(args):
+def test(args):
     print('Starting test.')
     model = M3Net(dim=64,img_size=args.img_size,method=args.method)
     model.cuda()

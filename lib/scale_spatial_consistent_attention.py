@@ -32,7 +32,7 @@ class SSCA(nn.Module):
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         self.conv_out4 = Conv2d(depth, 1, 1)
 
-        self.forward = self._ablation
+        self.forward = self._forward
         
     def initialize(self):
         weight_init(self)
@@ -70,7 +70,7 @@ class SA(nn.Module):
         self.scale = qk_scale if qk_scale != None else dim ** -0.5
         self.spatial_reduce = nn.Sequential(
             nn.Conv2d(dim,dim,self.ratio,self.ratio),
-            nn.BatchNorm2d(dim),
+            #nn.BatchNorm2d(dim),
         )
         self.norm = nn.LayerNorm(dim)
         self.q = nn.Linear(dim, dim, bias=qkv_bias)

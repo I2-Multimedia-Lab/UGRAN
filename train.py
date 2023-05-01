@@ -119,7 +119,7 @@ class PolyLr(_LRScheduler):
 
         return lrs
     
-def training(args):
+def train(args):
     model = M3Net(dim=64,img_size=args.img_size,method=args.method)
     if args.method == 'M3Net-R':
         model.encoder.load_state_dict(torch.load(args.pretrained_model), strict=False)

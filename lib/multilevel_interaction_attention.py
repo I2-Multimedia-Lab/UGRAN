@@ -80,7 +80,7 @@ class MIA(nn.Module):
             fea = fea.transpose(1,2).reshape(B,C,H,W)
         return fea
     
-    def _ablation(self,fea,fea_1=None,fea_2=None):
+    def _ablation(self,fea,fea_1=None,fea_2=None,fea_3=None):
         fea = self.ct(fea)
         return fea
 
