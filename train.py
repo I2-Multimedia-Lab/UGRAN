@@ -32,18 +32,27 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,train_size):
         #label = F.interpolate(label, (H//4,W//4), mode='nearest')
         #label = F.interpolate(label, (H//8,W//8), mode='nearest')
 
-        mask_1_8, mask_1_4, mask_1_2, mask_1_1 = model(images)
-        mask_1_8 = F.interpolate(mask_1_8,(H,W),mode='bilinear')
+        sal_1_16, sal_1_8, sal_1_4, mask_1_4, mask_1_2, mask_1_1 = model(images)
+        
+        #sal_1_16 = F.interpolate(sal_1_16,(H,W),mode='bilinear')
+        #sal_1_8 = F.interpolate(sal_1_8,(H,W),mode='bilinear')
+        #sal_1_4 = F.interpolate(sal_1_4,(H,W),mode='bilinear')
+
         mask_1_4 = F.interpolate(mask_1_4,(H,W),mode='bilinear')
         mask_1_2 = F.interpolate(mask_1_2,(H,W),mode='bilinear')
 
         #loss4  = F.binary_cross_entropy_with_logits(mask_1_16, label_1_16) + iou_loss(mask_1_16, label_1_16)
-        loss3 = F.binary_cross_entropy_with_logits(mask_1_8, label) + iou_loss(mask_1_8, label)
+        #loss3 = F.binary_cross_entropy_with_logits(mask_1_8, label) + iou_loss(mask_1_8, label)
         loss2 = F.binary_cross_entropy_with_logits(mask_1_4, label) + iou_loss(mask_1_4, label)
         loss1 = F.binary_cross_entropy_with_logits(mask_1_2, label) + iou_loss(mask_1_2, label)
         loss0 = F.binary_cross_entropy_with_logits(mask_1_1, label) + iou_loss(mask_1_1, label)
 
-        loss = loss_weights[0] * loss0 + loss_weights[0] * loss1 + loss_weights[1] * loss2 + loss_weights[2] * loss3 #+ loss_weights[3] * loss4
+        loss = loss_weights[0] * loss0 + loss_weights[0] * loss1 + loss_weights[1] * loss2 #+ loss_weights[2] * loss3 #+ loss_weights[3] * loss4
+
+        #scloss3 = nn.L1Loss(sal_1_8,sal_1_16) * 0.0001
+        #scloss2 = nn.L1Loss(sal_1_4,sal_1_8) * 0.0001
+
+        #loss = loss + scloss3 + scloss2
 
         opt.zero_grad()
         loss.backward()
@@ -53,14 +62,13 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,train_size):
         epoch_loss0 += loss0.cpu().data.item()
         epoch_loss1 += loss1.cpu().data.item()
         epoch_loss2 += loss2.cpu().data.item()
-        epoch_loss3 += loss3.cpu().data.item()
+        #epoch_loss3 += loss3.cpu().data.item()
         #epoch_loss4 += loss4.cpu().data.item()
 
         progress_bar.set_postfix(loss=f'{epoch_loss0/(i+1):.3f}')
     return epoch_loss0/l
         
-def fit(model, train_dl, epochs=60, lr=1e-4,train_size = 384):
-    save_dir = './loss.txt'
+def fit(model, train_dl, epochs=60, lr=1e-4,train_size = 384,save_dir = './loss.txt'):
     opt = get_opt(lr,model)
     scheduler = PolyLr(opt,gamma=0.9,minimum_lr=1.0e-07,max_iteration=len(train_dl)*epochs,warmup_iteration=12000)
 
@@ -138,7 +146,7 @@ def train(args):
     model.cuda()
     model.train()
     print('Starting train.')
-    fit(model,train_dl,args.train_epochs,args.lr,args.img_size)
+    fit(model,train_dl,args.train_epochs,args.lr,args.img_size,args.record)
     if not os.path.exists(args.save_model):
         os.makedirs(args.save_model)
     torch.save(model.state_dict(), args.save_model+args.method+'.pth')

@@ -34,7 +34,7 @@ def get_pred_dir(model, data_root = '/home/yy/datasets/', save_path = 'preds/',i
 
             outputs_saliency = model(images)
 
-            mask_1_1 = outputs_saliency[3]
+            mask_1_1 = outputs_saliency[-1]
 
             image_w, image_h = int(image_w[0]), int(image_h[0])
 
@@ -60,7 +60,7 @@ def test(args):
     print('Starting test.')
     model = M3Net(dim=64,img_size=args.img_size,method=args.method)
     model.cuda()
-    model.load_state_dict(torch.load(args.save_model+args.method+'.pth'))
+    model.load_state_dict(torch.load(args.save_model+args.method+'_MIA_bn_8421.pth'))
     print('Weight is loaded from '+args.save_model+args.method+'.pth.')
     model.eval()
     get_pred_dir(model,data_root=args.data_root,save_path=args.save_test,img_size = args.img_size,methods=args.test_methods)

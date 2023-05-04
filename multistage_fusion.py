@@ -18,7 +18,7 @@ class decoder(nn.Module):
         img_size (int): Input image size. Default 224
         mlp_ratio (float): Ratio of mlp hidden dim to embedding dim.
     """
-    def __init__(self,in_channels = [128,128,256,512,1024],depth=64, base_size=[384, 384], window_size = 12):
+    def __init__(self,in_channels = [128,128,256,512,1024],depth=96, base_size=[384, 384], window_size = 12):
         super(decoder, self).__init__()
         self.in_channels = in_channels
         self.depth = depth
@@ -31,16 +31,16 @@ class decoder(nn.Module):
         self.context4 = MFE(in_channel=self.in_channels[3],l_channel=self.in_channels[2],h_channel=self.in_channels[4], out_channel=self.depth, base_size=self.base_size, stage=4)
         self.context5 = MFE(in_channel=self.in_channels[4],l_channel=self.in_channels[3],out_channel=self.depth, base_size=self.base_size, stage=5)
         '''
-        self.context5 = MIA(dim=in_channels[4],dim1=None,dim2=None,embed_dim=depth*8,num_heads=8,mlp_ratio=3)
-        self.context4 = MIA(dim=in_channels[3],dim1=depth*8,dim2=None,embed_dim=depth*4,num_heads=4,mlp_ratio=3)
-        self.context3 = MIA(dim=in_channels[2],dim1=depth*4,dim2=depth*8,embed_dim=depth*2,num_heads=2,mlp_ratio=3)
-        self.context2 = MIA(dim=in_channels[1],dim1=depth*2,dim2=depth*4,embed_dim=depth,num_heads=1,mlp_ratio=3)
+        self.context5 = MIA(in_channel=in_channels[4],out_channel=depth,dim1=None,dim2=None,embed_dim=depth*8,num_heads=8,mlp_ratio=3)
+        self.context4 = MIA(in_channel=in_channels[3],out_channel=depth,dim1=depth,dim2=None,embed_dim=depth*4,num_heads=4,mlp_ratio=3)
+        self.context3 = MIA(in_channel=in_channels[2],out_channel=depth,dim1=depth,dim2=depth,embed_dim=depth*2,num_heads=2,mlp_ratio=3)
+        self.context2 = MIA(in_channel=in_channels[1],out_channel=depth,dim1=depth,dim2=depth,embed_dim=depth*1,num_heads=1,mlp_ratio=3)
 
         #'''
         #self.decoder = PAA_d(self.depth * 3, depth=self.depth, base_size=base_size, stage=2)
-        self.fusion4 = SSCA(in_channel=depth*12,depth=depth*4,dim=depth*8,num_heads=4,stacked=2,stage=4)
-        self.fusion3 = SSCA(in_channel=depth*6,depth=depth*2,dim=depth*4,num_heads=2,stacked=2,stage=3)
-        self.fusion2 = SSCA(in_channel=depth*3,depth=depth,dim=depth*2,num_heads=1,stacked=2,stage=2)
+        self.fusion4 = SSCA(in_channel=depth*2,depth=depth,dim=self.in_channels[3],num_heads=4,stacked=1,stage=4)
+        self.fusion3 = SSCA(in_channel=depth*2,depth=depth,dim=self.in_channels[2],num_heads=2,stacked=1,stage=3)
+        self.fusion2 = SSCA(in_channel=depth*2,depth=depth,dim=self.in_channels[1],num_heads=1,stacked=1,stage=2)
         #self.fusion1 = SSCA(self.depth*2,dim=self.in_channels[1],depth=self.depth,stage=1)
         self.proj = Conv2d(depth,1,1)
 
@@ -81,23 +81,23 @@ class decoder(nn.Module):
         x1,x2,x3,x4,x5 = x
         
         x5 = self.context5(x5) #32
-        x4 = self.context4(x4,x5)#,x_h=x5) #16
-        x3 = self.context3(x3,x4,x5)#,x_h=x4) #8
-        x2 = self.context2(x2,x3,x4)#,x_h=x3) #4
+        x4 = self.context4(x4,fea_1=x5)#,x_h=x5) #16
+        x3 = self.context3(x3,fea_1=x4)#,x_h=x4) #8
+        x2 = self.context2(x2,fea_1=x3)#,x_h=x3) #4
         #x1 = self.context1(x1,x_h=x2) #4
 
         '''
         f3, d3 = self.decoder([x3, x4, x5]) #16
         '''
         f5 = self.res(x5,(H//16,W//16))
-        f4, d4 = self.fusion4(torch.cat([x4,f5],dim=1))
+        f4, s4 = self.fusion4(torch.cat([x4,f5],dim=1))
 
         f4 = self.res(f4,(H//8,W//8))
-        f3, d3 = self.fusion3(torch.cat([x3,f4],dim=1))
+        f3, s3 = self.fusion3(torch.cat([x3,f4],dim=1))
 
         f3 = self.res(f3, (H // 4,  W // 4 ))
-        f2, d2 = self.fusion2(torch.cat([x2,f3],dim=1))
-        f2, d2 = self.attention2(f2, d3)
+        f2, s2 = self.fusion2(torch.cat([x2,f3],dim=1))
+        f2, d2 = self.attention2(f2, s3)
         #d2 = self.res(d3, (H//4,W//4))+p2
 
         f2 = self.res(f2, (H // 2, W // 2))
@@ -119,7 +119,7 @@ class decoder(nn.Module):
         cv2.imwrite('2.png',np.asarray(xx))
         ''' 
         
-        out = [d3,d2,d1,d0]
+        out = [s4,s3,s2,d2,d1,d0]
     
         return out
 

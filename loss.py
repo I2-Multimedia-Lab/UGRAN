@@ -1,6 +1,6 @@
 import torch
 import torch.nn.functional as F
-
+import torch.nn as nn
 
 # IoU Loss
 def iou_loss(pred, mask):
@@ -61,6 +61,9 @@ def adaptive_pixel_intensity_loss(pred, mask):
     amae = (omega * mae).sum(dim=(2, 3)) / (omega - 1).sum(dim=(2, 3))
 
     return (0.7 * abce + 0.7 * aiou + 0.7 * amae).mean()
+
+def consistent_loss(pred,mask):
+    return nn.L1Loss(pred,mask)
 
 def loss_func(pred,mask):
     return F.binary_cross_entropy_with_logits(pred,mask)+iou_loss(pred,mask)
