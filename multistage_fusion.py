@@ -18,7 +18,7 @@ class decoder(nn.Module):
         img_size (int): Input image size. Default 224
         mlp_ratio (float): Ratio of mlp hidden dim to embedding dim.
     """
-    def __init__(self,in_channels = [128,128,256,512,1024],depth=96, base_size=[384, 384], window_size = 12):
+    def __init__(self,in_channels = [128,128,256,512,1024],depth=64, base_size=[384, 384], window_size = 12):
         super(decoder, self).__init__()
         self.in_channels = in_channels
         self.depth = depth
@@ -31,10 +31,10 @@ class decoder(nn.Module):
         self.context4 = MFE(in_channel=self.in_channels[3],l_channel=self.in_channels[2],h_channel=self.in_channels[4], out_channel=self.depth, base_size=self.base_size, stage=4)
         self.context5 = MFE(in_channel=self.in_channels[4],l_channel=self.in_channels[3],out_channel=self.depth, base_size=self.base_size, stage=5)
         '''
-        self.context5 = MIA(in_channel=in_channels[4],out_channel=depth,dim1=None,dim2=None,embed_dim=depth*8,num_heads=8,mlp_ratio=3)
-        self.context4 = MIA(in_channel=in_channels[3],out_channel=depth,dim1=depth,dim2=None,embed_dim=depth*4,num_heads=4,mlp_ratio=3)
-        self.context3 = MIA(in_channel=in_channels[2],out_channel=depth,dim1=depth,dim2=depth,embed_dim=depth*2,num_heads=2,mlp_ratio=3)
-        self.context2 = MIA(in_channel=in_channels[1],out_channel=depth,dim1=depth,dim2=depth,embed_dim=depth*1,num_heads=1,mlp_ratio=3)
+        self.context5 = MIA(in_channel=in_channels[4],out_channel=depth,dim1=None,dim2=None,embed_dim=depth*16,num_heads=8,mlp_ratio=3)
+        self.context4 = MIA(in_channel=in_channels[3],out_channel=depth,dim1=in_channels[4],dim2=None,embed_dim=depth*8,num_heads=4,mlp_ratio=3)
+        self.context3 = MIA(in_channel=in_channels[2],out_channel=depth,dim1=in_channels[3],dim2=depth,embed_dim=depth*4,num_heads=2,mlp_ratio=3)
+        self.context2 = MIA(in_channel=in_channels[1],out_channel=depth,dim1=in_channels[2],dim2=depth,embed_dim=depth*2,num_heads=1,mlp_ratio=3)
 
         #'''
         #self.decoder = PAA_d(self.depth * 3, depth=self.depth, base_size=base_size, stage=2)
@@ -80,10 +80,11 @@ class decoder(nn.Module):
     
         x1,x2,x3,x4,x5 = x
         
-        x5 = self.context5(x5) #32
-        x4 = self.context4(x4,fea_1=x5)#,x_h=x5) #16
-        x3 = self.context3(x3,fea_1=x4)#,x_h=x4) #8
+        
         x2 = self.context2(x2,fea_1=x3)#,x_h=x3) #4
+        x3 = self.context3(x3,fea_1=x4)#,x_h=x4) #8
+        x4 = self.context4(x4,fea_1=x5)#,x_h=x5) #16
+        x5 = self.context5(x5) #32
         #x1 = self.context1(x1,x_h=x2) #4
 
         '''

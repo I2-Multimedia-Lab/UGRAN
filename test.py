@@ -60,7 +60,7 @@ def test(args):
     print('Starting test.')
     model = M3Net(dim=64,img_size=args.img_size,method=args.method)
     model.cuda()
-    model.load_state_dict(torch.load(args.save_model+args.method+'_MIA_bn_8421.pth'))
+    model.load_state_dict(torch.load(args.save_model+args.method+'.pth'))
     print('Weight is loaded from '+args.save_model+args.method+'.pth.')
     model.eval()
     get_pred_dir(model,data_root=args.data_root,save_path=args.save_test,img_size = args.img_size,methods=args.test_methods)
