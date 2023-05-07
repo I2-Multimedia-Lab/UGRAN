@@ -135,7 +135,7 @@ class SABlock(nn.Module):
             attn_drop=attn_drop, proj_drop=drop, sr_ratio=sr_ratio,)
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
-        self.norm2 = norm_layer(dim)
+        self.norm2 = nn.BatchNorm2d(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
         #self.apply(self._init_weights)
@@ -159,7 +159,8 @@ class SABlock(nn.Module):
 
     def forward(self, x, H, W):
         x = x + self.drop_path(self.attn(self.norm1(x), H, W))
-        x = x + self.drop_path(self.mlp(self.norm2(x), H, W))
+        B, N, C = x.shape
+        x = x + self.drop_path(self.mlp(self.norm2(x.transpose(1, 2).view(B, C, H, W)  ), H, W))
 
         return x
 
@@ -169,10 +170,10 @@ class Mlp(nn.Module):
         super().__init__()
         out_features = out_features or in_features
         hidden_features = hidden_features or in_features
-        self.fc1 = nn.Linear(in_features, hidden_features)
+        self.fc1 = nn.Conv2d(in_features, hidden_features,1)
         self.dwconv = DWConv(hidden_features)
-        self.act = act_layer()
-        self.fc2 = nn.Linear(hidden_features, out_features)
+        self.act = nn.ReLU()
+        self.fc2 = nn.Conv2d(hidden_features, out_features,1)
         self.drop = nn.Dropout(drop)
         self.linear = linear
         if self.linear:
@@ -196,13 +197,15 @@ class Mlp(nn.Module):
     def initialize(self):
         weight_init(self)
     def forward(self, x, H, W):
+
         x = self.fc1(x)
         if self.linear:
             x = self.relu(x)
-        x = self.dwconv(x, H, W)
+        #x = self.dwconv(x, H, W)
         x = self.act(x)
         x = self.drop(x)
         x = self.fc2(x)
+        x = x.flatten(2).transpose(1, 2)   
         x = self.drop(x)
         return x
     
