@@ -62,8 +62,9 @@ def adaptive_pixel_intensity_loss(pred, mask):
 
     return (0.7 * abce + 0.7 * aiou + 0.7 * amae).mean()
 
-def consistent_loss(pred,mask):
-    return nn.L1Loss(pred,mask)
+#def consistent_loss(pred,mask):
+#    lossfc = nn.L1Loss()
+#    return lossfc(pred,mask)
 
 def loss_func(pred,mask):
     return F.binary_cross_entropy_with_logits(pred,mask)+iou_loss(pred,mask)
