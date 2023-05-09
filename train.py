@@ -33,7 +33,7 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,train_size):
         #label = F.interpolate(label, (H//4,W//4), mode='nearest')
         #label = F.interpolate(label, (H//8,W//8), mode='nearest')
 
-        sal_1_16, sal_1_8, sal_1_4, mask_1_4, mask_1_2, mask_1_1 = model(images)
+        unc_1,unc_2,unc_3,sal_1_16, sal_1_8, sal_1_4, mask_1_4, mask_1_2, mask_1_1 = model(images)
         
         sal_1_16 = F.interpolate(sal_1_16,(H,W),mode='bilinear')
         sal_1_8 = F.interpolate(sal_1_8,(H,W),mode='bilinear')

@@ -38,13 +38,13 @@ class WCA(nn.Module):
         self.register_buffer("relative_position_index", relative_position_index)
 
         self.q = nn.Sequential(
-            nn.Linear(depth,depth)
+            Conv2d(depth,depth,3,relu=True),
         )
         self.k = nn.Sequential(
-            nn.Linear(depth,depth)
+            Conv2d(depth,depth,1,relu=True),
         )
         self.v = nn.Sequential(
-            nn.Linear(depth,depth)
+            Conv2d(depth,depth,1,relu=True),
         )
 
         self.conv_out1 = Conv2d(depth,depth,3,relu=True)
@@ -71,13 +71,13 @@ class WCA(nn.Module):
 
         x_uncertain = x-cg
         
-        x_windows = window_partition(x,self.window_size).flatten(2).transpose(1,2)
-        c_windows = window_partition(x_uncertain,self.window_size).flatten(2).transpose(1,2)
+        x_windows = window_partition(x,self.window_size)
+        c_windows = window_partition(x_uncertain,self.window_size)
         b = x_windows.shape[0]
-        q = self.q(x_windows)
-        k = self.k(c_windows)
-        v = self.v(c_windows)
-        attn = q @ k.transpose(-2, -1)
+        q = self.q(x_windows).view(b, self.depth, -1).permute(0, 2, 1)
+        k = self.k(c_windows).view(b,self.depth,-1)
+        v = self.v(c_windows).view(b, self.depth, -1).permute(0, 2, 1)
+        attn = torch.bmm(q,k)
         attn = (self.depth ** -.5) * attn
 
         relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
@@ -87,7 +87,7 @@ class WCA(nn.Module):
 
         attn = F.softmax(attn, dim=-1)
         
-        attn = (attn @ v).view(b, -1, self.window_size, self.window_size)
+        attn = torch.bmm(attn, v).permute(0, 2, 1).contiguous().view(b, -1, self.window_size, self.window_size)
         x_reverse = window_reverse(attn,self.window_size,H,W)
         x_reverse = self.conv_out1(x_reverse)
         x_cat = torch.cat([x,x_reverse],dim=1)
@@ -96,7 +96,7 @@ class WCA(nn.Module):
         x = self.conv_out3(x)
         out = self.conv_out4(x)
 
-        return x, out
+        return x, out, cg
     
     def _ablation(self,x, map_s,map_l=None):
         out = self.conv_out4(x)

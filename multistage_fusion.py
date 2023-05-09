@@ -98,15 +98,15 @@ class decoder(nn.Module):
 
         f3 = self.res(f3, (H // 4,  W // 4 ))
         f2, s2 = self.fusion2(torch.cat([x2,f3],dim=1))
-        f2, d2 = self.attention2(f2, s3)
+        f2, d2, c2 = self.attention2(f2, s3)
         #d2 = self.res(d3, (H//4,W//4))+p2
 
         f2 = self.res(f2, (H // 2, W // 2))
-        f1, d1 = self.attention1(f2,d2) #2
+        f1, d1, c1 = self.attention1(f2,d2) #2
         #d1 = self.res(d2, (H//2,W//2))+p1
 
         f1 = self.res(f1, (H, W))
-        _, d0 = self.attention0(f1,d1) #2
+        _, d0, c0 = self.attention0(f1,d1) #2
         #d0 = self.res(d1, (H,W))+p0
 
         '''
@@ -120,7 +120,7 @@ class decoder(nn.Module):
         cv2.imwrite('2.png',np.asarray(xx))
         ''' 
         
-        out = [s4,s3,s2,d2,d1,d0]
+        out = [c2,c1,c0,s4,s3,s2,d2,d1,d0]
     
         return out
 
