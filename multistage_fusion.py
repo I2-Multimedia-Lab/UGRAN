@@ -6,7 +6,7 @@ import torch.nn.functional as F
 #from lib.layers import *
 from lib.multiscale_feature_enhancement import MFE
 from lib.scale_spatial_consistent_attention import SSCA
-from lib.window_based_context_attention import WCA
+from xxSOD.lib.uncertainty_aware_refine_attention import URA
 from lib.multilevel_interaction_attention import MIA
 from lib.modules import *
 class decoder(nn.Module):
@@ -44,9 +44,9 @@ class decoder(nn.Module):
         #self.fusion1 = SSCA(self.depth*2,dim=self.in_channels[1],depth=self.depth,stage=1)
         self.proj = Conv2d(depth,1,1)
 
-        self.attention0 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=0)
-        self.attention1 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=1)
-        self.attention2 = WCA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=2)
+        self.attention0 = URA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=0)
+        self.attention1 = URA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=1)
+        self.attention2 = URA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=2)
 
         #self.pc_loss_fn  = nn.L1Loss()
 

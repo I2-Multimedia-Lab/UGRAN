@@ -3,10 +3,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 #from Models.modules import *
 from .modules import *
-class WCA(nn.Module):
+class URA(nn.Module):
     # Window-based Context Attention
     def __init__(self, in_channel, out_channel=1, depth=64, base_size=[384,384], window_size = 12, c_num=3, stage=None):
-        super(WCA, self).__init__()
+        super(URA, self).__init__()
         
         if base_size is not None and stage is not None:
             self.stage_size = (base_size[0] // (2 ** stage), base_size[1] // (2 ** stage))
@@ -38,13 +38,13 @@ class WCA(nn.Module):
         self.register_buffer("relative_position_index", relative_position_index)
 
         self.q = nn.Sequential(
-            Conv2d(depth,depth,3,relu=True),
+            nn.Linear(depth,depth)
         )
         self.k = nn.Sequential(
-            Conv2d(depth,depth,1,relu=True),
+            nn.Linear(depth,depth)
         )
         self.v = nn.Sequential(
-            Conv2d(depth,depth,1,relu=True),
+            nn.Linear(depth,depth)
         )
 
         self.conv_out1 = Conv2d(depth,depth,3,relu=True)
@@ -71,13 +71,13 @@ class WCA(nn.Module):
 
         x_uncertain = x-cg
         
-        x_windows = window_partition(x,self.window_size)
-        c_windows = window_partition(x_uncertain,self.window_size)
+        x_windows = window_partition(x,self.window_size).flatten(2).transpose(1,2)
+        c_windows = window_partition(x_uncertain,self.window_size).flatten(2).transpose(1,2)
         b = x_windows.shape[0]
-        q = self.q(x_windows).view(b, self.depth, -1).permute(0, 2, 1)
-        k = self.k(c_windows).view(b,self.depth,-1)
-        v = self.v(c_windows).view(b, self.depth, -1).permute(0, 2, 1)
-        attn = torch.bmm(q,k)
+        q = self.q(x_windows)
+        k = self.k(c_windows)
+        v = self.v(c_windows)
+        attn = q @ k.transpose(-2, -1)
         attn = (self.depth ** -.5) * attn
 
         relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
@@ -87,7 +87,7 @@ class WCA(nn.Module):
 
         attn = F.softmax(attn, dim=-1)
         
-        attn = torch.bmm(attn, v).permute(0, 2, 1).contiguous().view(b, -1, self.window_size, self.window_size)
+        attn = (attn @ v).view(b, -1, self.window_size, self.window_size)
         x_reverse = window_reverse(attn,self.window_size,H,W)
         x_reverse = self.conv_out1(x_reverse)
         x_cat = torch.cat([x,x_reverse],dim=1)
