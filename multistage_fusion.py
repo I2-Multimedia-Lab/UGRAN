@@ -6,7 +6,7 @@ import torch.nn.functional as F
 #from lib.layers import *
 from lib.multiscale_feature_enhancement import MFE
 from lib.scale_spatial_consistent_attention import SSCA
-from xxSOD.lib.uncertainty_aware_refine_attention import URA
+from lib.uncertainty_aware_refine_attention import URA
 from lib.multilevel_interaction_attention import MIA
 from lib.modules import *
 class decoder(nn.Module):
