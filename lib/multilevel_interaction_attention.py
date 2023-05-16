@@ -31,11 +31,11 @@ class MIA(nn.Module):
             self.interact1 = CrossAttention(dim1 = embed_dim,dim2 = dim1,dim = embed_dim,num_heads=num_heads,qkv_bias=qkv_bias,qk_scale=qk_scale,attn_drop=attn_drop,proj_drop=drop)
             self.norm1 = norm_layer(dim1)
 
-            self.norm = nn.LayerNorm(embed_dim)
+            self.norm = nn.BatchNorm2d(embed_dim)
             self.mlp = nn.Sequential(
-                nn.Linear(embed_dim, embed_dim*mlp_ratio),
+                nn.Conv2d(embed_dim, embed_dim*mlp_ratio,1),
                 act_layer(),
-                nn.Linear(embed_dim*mlp_ratio, embed_dim),
+                nn.Conv2d(embed_dim*mlp_ratio, embed_dim,1),
             )
         if self.dim2:
             #self.ca2 = SE(dim=dim2)
@@ -79,8 +79,8 @@ class MIA(nn.Module):
                 fea = fea + fea_2
             if self.dim3!=None and fea_3!=None:
                 fea = fea + fea_3
-            fea = fea + self.drop_path(self.mlp(self.norm(fea)))
             fea = fea.transpose(1,2).reshape(B,self.embed_dim,H,W)
+            fea = fea + self.drop_path(self.mlp(self.norm(fea)))
         fea = self.proj(fea)
         return fea
     
