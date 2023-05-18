@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from timm.models.layers import DropPath
 from .modules import *
-class MIA(nn.Module):
+class MIA1(nn.Module):
     r""" Multilevel Interaction Block. 
     
     Args:
@@ -83,6 +83,89 @@ class MIA(nn.Module):
             fea = fea + self.drop_path(self.mlp(self.norm(fea)))
         fea = self.proj(fea)
         return fea
+    
+    def _ablation(self,fea,fea_1=None,fea_2=None,fea_3=None):
+        fea = self.res(fea)
+        return fea
+
+    def flops(self,N1,N2,N3=None):
+        flops = 0
+        flops += self.interact1.flops(N1,N2)
+        if N3:
+            flops += self.interact2.flops(N1,N3)
+        flops += self.dim*N1
+        flops += 2*N1*self.dim*self.dim*self.mlp_ratio
+        return flops
+
+class MIA(nn.Module):
+    r""" Multilevel Interaction Block. 
+    
+    Args:
+        dim (int): Number of low-level feature channels.
+        dim1, dim2 (int): Number of high-level feature channels.
+        embed_dim (int): Dimension for attention.
+        num_heads (int): Number of attention heads.
+        mlp_ratio (float): Ratio of mlp hidden dim to embedding dim.
+    """
+    
+    def __init__(self,in_channel,out_channel,dim1=None,dim2=None,dim3=None,embed_dim = 384,num_heads = 6,mlp_ratio = 3., qkv_bias = False, qk_scale = None,drop = 0.,attn_drop = 0.,drop_path = 0.,act_layer=nn.GELU, norm_layer=nn.LayerNorm):
+        super(MIA, self).__init__()
+        self.with_channel = False
+        self.after_relu = False
+        
+        mid_channel=in_channel
+        if dim1 != None:
+            mid_channel = dim1
+            self.ct = nn.Conv2d(in_channel,mid_channel,1)
+            self.f_x = nn.Sequential(
+                                nn.Conv2d(mid_channel, mid_channel, 
+                                          kernel_size=1, bias=False),
+                                nn.BatchNorm2d(mid_channel)
+                                )
+            self.f_y = nn.Sequential(
+                                nn.Conv2d(dim1, mid_channel, 
+                                          kernel_size=1, bias=False),
+                                nn.BatchNorm2d(mid_channel)
+                                )
+        self.proj = nn.Conv2d(mid_channel,out_channel,1)
+        if self.with_channel:
+            self.up = nn.Sequential(
+                                    nn.Conv2d(mid_channel, in_channel, 
+                                              kernel_size=1, bias=False),
+                                    nn.BatchNorm2d(in_channel)
+                                   )
+        if self.after_relu:
+            self.relu = nn.ReLU(inplace=True)
+        self.forward = self._forward
+        if self.forward == self._ablation:
+            self.res = Conv2d(in_channel,out_channel,1)
+    def initialize(self):
+        weight_init(self)
+
+    def _forward(self,x,fea_1=None,fea_2=None,fea_3=None):
+        y = fea_1
+        input_size = x.size()
+        if y!=None:
+            x = self.ct(x)
+            if self.after_relu:
+                y = self.relu(y)
+                x = self.relu(x)
+            
+            y_q = self.f_y(y)
+            y_q = F.interpolate(y_q, size=[input_size[2], input_size[3]],
+                                mode='bilinear', align_corners=False)
+            x_k = self.f_x(x)
+            
+            if self.with_channel:
+                sim_map = torch.sigmoid(self.up(x_k * y_q))
+            else:
+                sim_map = torch.sigmoid(torch.sum(x_k * y_q, dim=1).unsqueeze(1))
+            
+            y = F.interpolate(y, size=[input_size[2], input_size[3]],
+                                mode='bilinear', align_corners=False)
+            x = (1-sim_map)*x + sim_map*y
+        x = self.proj(x)
+        return x
     
     def _ablation(self,fea,fea_1=None,fea_2=None,fea_3=None):
         fea = self.res(fea)

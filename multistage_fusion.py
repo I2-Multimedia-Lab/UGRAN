@@ -83,8 +83,8 @@ class decoder(nn.Module):
         
         x5 = self.context5(x5_) #32
         x4 = self.context4(x4_,fea_1=x5_)#,x_h=x5) #16
-        x3 = self.context3(x3_,fea_1=x4_,fea_2=x5_)#,x_h=x4) #8
-        x2 = self.context2(x2_,fea_1=x3_,fea_2=x4_)#,x_h=x3) #4
+        x3 = self.context3(x3_,fea_1=x4_)#,x_h=x4) #8
+        x2 = self.context2(x2_,fea_1=x3_)#,x_h=x3) #4
         #x1 = self.context1(x1,x_h=x2) #4
 
         '''
