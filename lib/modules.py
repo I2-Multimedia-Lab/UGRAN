@@ -70,7 +70,7 @@ class Attention(nn.Module):
         return flops
 
 class CrossAttention(nn.Module):
-    def __init__(self, dim1,dim2, dim, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0.):
+    def __init__(self, dim1,dim2, dim, out_channel=None, num_heads=8, qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0.):
         super().__init__()
         self.num_heads = num_heads
         head_dim = dim // num_heads
@@ -78,9 +78,10 @@ class CrossAttention(nn.Module):
         self.dim1 = dim1
         self.dim2 = dim2
         self.scale = qk_scale or head_dim ** -0.5
+        self.out_channel = out_channel or dim1
 
         self.q1 = nn.Linear(dim1, dim, bias=qkv_bias)
-        self.proj = nn.Linear(dim, dim1)
+        self.proj = nn.Linear(dim, self.out_channel)
 
         self.k2 = nn.Linear(dim2, dim, bias=qkv_bias)
         self.v2 = nn.Linear(dim2, dim, bias=qkv_bias)
@@ -101,7 +102,8 @@ class CrossAttention(nn.Module):
         v2 = self.v2(depth_fea).reshape(B, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
 
         attn = (q1 @ k2.transpose(-2, -1)) * self.scale
-        attn = attn.softmax(dim=-1)
+        #attn = attn.softmax(dim=-1)
+        attn = torch.sigmoid(attn)
         attn = self.attn_drop(attn)
 
         fea = (attn @ v2).transpose(1, 2).reshape(B, N1, C)
