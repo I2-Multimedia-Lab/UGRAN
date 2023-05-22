@@ -102,8 +102,7 @@ class CrossAttention(nn.Module):
         v2 = self.v2(depth_fea).reshape(B, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
 
         attn = (q1 @ k2.transpose(-2, -1)) * self.scale
-        #attn = attn.softmax(dim=-1)
-        attn = torch.sigmoid(attn)
+        attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
 
         fea = (attn @ v2).transpose(1, 2).reshape(B, N1, C)
