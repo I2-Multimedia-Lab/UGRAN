@@ -100,7 +100,7 @@ class URA(nn.Module):
     
     def _ablation(self,x, map_s,map_l=None):
         out = self.conv_out4(x)
-        return x, out
+        return x, out, out
     
 def window_partition(x, window_size):
     """

@@ -26,7 +26,7 @@ class SSCA(nn.Module):
                  drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm, sr_ratio=self.ratio,)
             for i in range(stacked)])
     
-        self.conv_out1 = Conv2d(dim,depth,3,relu=True)
+        self.conv_out1 = Conv2d(dim,depth,1)
         
         #self.conv_out2 = Conv2d(dim, dim, 3, relu=True)
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
