@@ -30,14 +30,16 @@ def structure_loss(pred, mask, weight=None):
     wiou = 1 - (inter + 1) / (union - inter + 1)
     return (wbce + wiou).mean()
 
-def wbce(pred,mask):
-    w1 = torch.abs(F.avg_pool2d(mask, kernel_size=3, stride=1, padding=1) - mask)
-    w2 = torch.abs(F.avg_pool2d(mask, kernel_size=15, stride=1, padding=7) - mask)
-    w3 = torch.abs(F.avg_pool2d(mask, kernel_size=31, stride=1, padding=15) - mask)
+def wbce(pred,mask,weight=None):
+    if weight == None:
+        w1 = torch.abs(F.avg_pool2d(mask, kernel_size=3, stride=1, padding=1) - mask)
+        w2 = torch.abs(F.avg_pool2d(mask, kernel_size=15, stride=1, padding=7) - mask)
+        w3 = torch.abs(F.avg_pool2d(mask, kernel_size=31, stride=1, padding=15) - mask)
 
-    weit = 1 + 1.5 * (w1+w2+w3)
-    #weit = 1 + 5 * torch.abs(F.avg_pool2d(mask, kernel_size=15, stride=1, padding=7) - mask)
-
+        weit = 1 + 1.5 * (w1+w2+w3)
+        #weit = 1 + 5 * torch.abs(F.avg_pool2d(mask, kernel_size=15, stride=1, padding=7) - mask)
+    else:
+        weight = 1 + 5 * weight
     wbce = F.binary_cross_entropy_with_logits(pred, mask, reduce='none')
     wbce = (weit * wbce).sum(dim=(2, 3)) / weit.sum(dim=(2, 3))
     return wbce.mean()

@@ -69,10 +69,10 @@ class URA(nn.Module):
         #bg = torch.clip(-p, 0, 1) # background
         cg = self.threshold - torch.abs(p) # confusion area
 
-        x_uncertain = x-cg
+        x_uncertain = x*cg
         
-        x_windows = window_partition(x_uncertain,self.window_size).flatten(2).transpose(1,2)
-        c_windows = window_partition(x,self.window_size).flatten(2).transpose(1,2)
+        x_windows = window_partition(x,self.window_size).flatten(2).transpose(1,2)
+        c_windows = window_partition(x_uncertain,self.window_size).flatten(2).transpose(1,2)
         b = x_windows.shape[0]
         q = self.q(x_windows)
         k = self.k(c_windows)
