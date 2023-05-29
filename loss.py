@@ -39,8 +39,8 @@ def wbce(pred,mask,weight=None):
         weit = 1 + 1.5 * (w1+w2+w3)
         #weit = 1 + 5 * torch.abs(F.avg_pool2d(mask, kernel_size=15, stride=1, padding=7) - mask)
     else:
-        weight = 1 + 5 * weight
-    wbce = F.binary_cross_entropy_with_logits(pred, mask, reduce='none')
+        weit = 1 + 5 * weight
+    wbce = F.binary_cross_entropy_with_logits(pred, mask, reduction='none')
     wbce = (weit * wbce).sum(dim=(2, 3)) / weit.sum(dim=(2, 3))
     return wbce.mean()
 
