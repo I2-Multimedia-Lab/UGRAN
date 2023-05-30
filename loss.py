@@ -21,7 +21,7 @@ def structure_loss(pred, mask, weight=None):
         weit = 1 + 5 * weight
 
     new_gts = generate_smoothed_gt(mask)
-    wbce = F.binary_cross_entropy_with_logits(pred, new_gts, reduce='none')
+    wbce = F.binary_cross_entropy_with_logits(pred, new_gts, reduction='none')
     wbce = (weit * wbce).sum(dim=(2, 3)) / weit.sum(dim=(2, 3))
 
     pred = torch.sigmoid(pred)
