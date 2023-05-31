@@ -17,8 +17,8 @@ class URA(nn.Module):
         self.depth = depth
         self.window_size = window_size
         self.channel_trans = Conv2d(c_num,depth,1)
-        self.threshold = nn.Parameter(torch.tensor([0.5]))
-        self.lthreshold = nn.Parameter(torch.tensor([0.5]))
+        self.threshold = 0.5
+        #self.lthreshold = nn.Parameter(torch.tensor([0.5]))
 
         # define a parameter table of relative position bias
         self.relative_position_bias_table = nn.Parameter(
@@ -49,7 +49,7 @@ class URA(nn.Module):
 
         self.conv_out1 = Conv2d(depth,depth,3,relu=True)
         
-        self.conv_out2 = Conv2d(in_channel+depth, depth, 3, relu=True)
+        #self.conv_out2 = Conv2d(in_channel+depth, depth, 3, relu=True)
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         self.conv_out4 = Conv2d(depth, out_channel, 1)
 
@@ -90,9 +90,9 @@ class URA(nn.Module):
         attn = (attn @ v).view(b, -1, self.window_size, self.window_size)
         x_reverse = window_reverse(attn,self.window_size,H,W)
         x_reverse = self.conv_out1(x_reverse)
-        x_cat = torch.cat([x,x_reverse],dim=1)
+        x = x+x_reverse
         
-        x = self.conv_out2(x_cat)
+        #x = self.conv_out2(x)
         x = self.conv_out3(x)
         out = self.conv_out4(x)
 
