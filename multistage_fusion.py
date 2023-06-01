@@ -79,7 +79,7 @@ class decoder(nn.Module):
         H, W = self.base_size
     
         x1_,x2_,x3_,x4_,x5_ = x
-        
+        l = x1_
         
         x5 = self.context5(x5_) #32
         x4 = self.context4(x4_,fea_1=x5_)#,x_h=x5) #16
@@ -98,15 +98,17 @@ class decoder(nn.Module):
 
         f3 = self.res(f3, (H // 4,  W // 4 ))
         f2, s2 = self.fusion2(torch.cat([x2,f3],dim=1))
-        f2, d2, c2 = self.attention2(f2, s3)
+        f2, d2, c2 = self.attention2(f2, l, s3)
         #d2 = self.res(d3, (H//4,W//4))+p2
 
         f2 = self.res(f2, (H // 2, W // 2))
-        f1, d1, c1 = self.attention1(f2,d2) #2
+        l = self.res(l, (H // 2, W // 2))
+        f1, d1, c1 = self.attention1(f2,l,d2) #2
         #d1 = self.res(d2, (H//2,W//2))+p1
 
         f1 = self.res(f1, (H, W))
-        _, d0, c0 = self.attention0(f1,d1) #2
+        l = self.res(l, (H, W))
+        _, d0, c0 = self.attention0(f1,l,d1) #2
         #d0 = self.res(d1, (H,W))+p0
 
         '''

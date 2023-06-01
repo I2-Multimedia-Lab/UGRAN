@@ -58,18 +58,17 @@ class URA(nn.Module):
     def initialize(self):
         weight_init(self)
         
-    def _forward(self, x, map_s,map_l=None):
+    def _forward(self, x, l, map_s,map_l=None):
         
         H,W  = x.shape[-2:]
         map_s = F.interpolate(map_s, size=x.shape[-2:], mode='bilinear', align_corners=False)
         map_s = torch.sigmoid(map_s)
         p = map_s - self.threshold
-        
         #fg = torch.clip(p, 0, 1) # foreground
         #bg = torch.clip(-p, 0, 1) # background
         cg = self.threshold - torch.abs(p) # confusion area
 
-        x_uncertain = x*cg
+        x_uncertain = l*cg
         
         x_windows = window_partition(x,self.window_size).flatten(2).transpose(1,2)
         c_windows = window_partition(x_uncertain,self.window_size).flatten(2).transpose(1,2)
