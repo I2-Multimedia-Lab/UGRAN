@@ -31,10 +31,10 @@ class decoder(nn.Module):
         self.context4 = MFE(in_channel=self.in_channels[3],l_channel=self.in_channels[2],h_channel=self.in_channels[4], out_channel=self.depth, base_size=self.base_size, stage=4)
         self.context5 = MFE(in_channel=self.in_channels[4],l_channel=self.in_channels[3],out_channel=self.depth, base_size=self.base_size, stage=5)
         '''
-        self.context5 = MIA(in_channel=in_channels[4],out_channel=depth,dim1=None,dim2=None,embed_dim=depth*16,num_heads=8,mlp_ratio=3)
-        self.context4 = MIA(in_channel=in_channels[3],out_channel=depth,dim1=in_channels[4],dim2=None,embed_dim=depth*8,num_heads=4,mlp_ratio=3)
-        self.context3 = MIA(in_channel=in_channels[2],out_channel=depth,dim1=in_channels[3],dim2=in_channels[4],embed_dim=depth*4,num_heads=2,mlp_ratio=3)
-        self.context2 = MIA(in_channel=in_channels[1],out_channel=depth,dim1=in_channels[2],dim2=in_channels[3],dim3=in_channels[4],embed_dim=depth*2,num_heads=1,mlp_ratio=3)
+        self.context5 = MIA(in_channel=in_channels[4],out_channel=depth,dim1=in_channels[4],dim2=None,embed_dim=depth*16,num_heads=8,mlp_ratio=3)
+        self.context4 = MIA(in_channel=in_channels[3],out_channel=depth,dim1=in_channels[3],dim2=None,embed_dim=depth*8,num_heads=4,mlp_ratio=3)
+        self.context3 = MIA(in_channel=in_channels[2],out_channel=depth,dim1=in_channels[2],dim2=in_channels[4],embed_dim=depth*4,num_heads=2,mlp_ratio=3)
+        self.context2 = MIA(in_channel=in_channels[1],out_channel=depth,dim1=in_channels[1],dim2=in_channels[3],dim3=in_channels[4],embed_dim=depth*2,num_heads=1,mlp_ratio=3)
 
         #'''
         #self.decoder = PAA_d(self.depth * 3, depth=self.depth, base_size=base_size, stage=2)
@@ -81,10 +81,10 @@ class decoder(nn.Module):
         x1_,x2_,x3_,x4_,x5_ = x
         l = x1_
         
-        x5 = self.context5(x5_) #32
-        x4 = self.context4(x4_,fea_1=x5_)#,x_h=x5) #16
-        x3 = self.context3(x3_,fea_1=x4_)#,x_h=x4) #8
-        x2 = self.context2(x2_,fea_1=x3_)#,x_h=x3) #4
+        x5 = self.context5(x5_,fea_1=x5_) #32
+        x4 = self.context4(x4_,fea_1=x4_)#,x_h=x5) #16
+        x3 = self.context3(x3_,fea_1=x3_)#,x_h=x4) #8
+        x2 = self.context2(x2_,fea_1=x2_)#,x_h=x3) #4
         #x1 = self.context1(x1,x_h=x2) #4
 
         '''

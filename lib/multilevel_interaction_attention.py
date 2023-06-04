@@ -62,12 +62,14 @@ class MIA(nn.Module):
             B,_,H,W = fea.shape
             fea = fea.reshape(B,self.embed_dim,-1).transpose(1,2)
             fea = self.norm0(fea)
-            fea_1 = fea_1.reshape(B,self.dim1,-1).transpose(1,2)
+            _,C,_,_ = fea_1.shape
+            fea_1 = fea_1.reshape(B,C,-1).transpose(1,2)
             fea_1 = self.norm1(fea_1)
             fea_1 = self.interact1(fea,fea_1)
                 
             if self.dim2!=None and fea_2!=None:
-                fea_2 = fea_2.reshape(B,self.dim2,-1).transpose(1,2)
+                _,C,_,_ = fea_2.shape
+                fea_2 = fea_2.reshape(B,C,-1).transpose(1,2)
                 fea_2 = self.norm2(fea_2)
                 fea_2 = self.interact2(fea,fea_2)
             if self.dim3!=None and fea_3!=None:
