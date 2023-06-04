@@ -53,7 +53,7 @@ class URA(nn.Module):
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         self.conv_out4 = Conv2d(depth, out_channel, 1)
 
-        self.forward = self._forward
+        self.forward = self._ablation
 
     def initialize(self):
         weight_init(self)
