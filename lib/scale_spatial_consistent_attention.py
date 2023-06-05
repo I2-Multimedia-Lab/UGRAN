@@ -68,10 +68,16 @@ class SA(nn.Module):
         self.num_heads = num_heads
         self.ratio = sr_ratio
         self.scale = qk_scale if qk_scale != None else dim ** -0.5
-        self.spatial_reduce = nn.Sequential(
-            nn.Conv2d(dim,dim,self.ratio,self.ratio),
-            nn.BatchNorm2d(dim),
-        )
+        if sr_ratio == 1:
+            self.spatial_reduce = nn.Sequential(
+                nn.ConvTranspose2d(dim,dim,self.ratio,2,output_padding=(1,1)),
+                nn.BatchNorm2d(dim),
+            )
+        else:
+            self.spatial_reduce = nn.Sequential(
+                nn.Conv2d(dim,dim,self.ratio//2,self.ratio//2),
+                nn.BatchNorm2d(dim),
+            )
         self.norm = nn.LayerNorm(dim)
         self.q = nn.Linear(dim, dim, bias=qkv_bias)
         self.kv = nn.Linear(dim, dim*2, bias=qkv_bias)
@@ -102,7 +108,7 @@ class SA(nn.Module):
         B, N, C = x.shape
         q = self.q(x).reshape(B, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
 
-        if self.ratio > 1:
+        if self.ratio > 2:
             x_ = x.permute(0, 2, 1).reshape(B, C, H, W)
             x_ = self.spatial_reduce(x_).reshape(B, C, -1).permute(0, 2, 1)
             x_ = self.norm(x_)

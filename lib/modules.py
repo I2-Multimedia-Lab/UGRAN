@@ -454,7 +454,7 @@ class MixedAttentionBlock(nn.Module):
     
 def weight_init(module):
     for n, m in module.named_children():
-        if isinstance(m, nn.Conv2d):
+        if isinstance(m, (nn.Conv2d,nn.ConvTranspose2d)):
             nn.init.kaiming_normal_(m.weight, mode='fan_in', nonlinearity='relu')
             #nn.init.xavier_normal_(m.weight, gain=1)
             if m.bias is not None:
