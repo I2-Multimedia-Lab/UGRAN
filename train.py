@@ -89,7 +89,7 @@ def fit(model, train_dl, epochs=60, lr=1e-4,train_size = 384,save_dir = './loss.
         if (epoch+1)%10 == 0:
             if not os.path.exists('savepth/tmp/'):
                 os.makedirs('savepth/tmp/')
-            torch.save(model.state_dict(), 'savepth/tmp/'+str(epoch+1)+'__.pth')
+            torch.save(model.state_dict(), 'savepth/tmp/'+str(epoch+1)+'.pth')
         if epoch+1 == epochs:
             fh.write(str(datetime.datetime.now())+'\n')
             fh.write('End record.\n')

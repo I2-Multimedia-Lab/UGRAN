@@ -33,7 +33,8 @@ class SSCA(nn.Module):
         self.conv_out4 = Conv2d(depth, 1, 1)
 
         self.forward = self._forward
-        
+        if self.forward == self._ablation:
+            self.res = Conv2d(in_channel,depth,1)
     def initialize(self):
         weight_init(self)
 
@@ -54,8 +55,7 @@ class SSCA(nn.Module):
         return x,out
 
     def _ablation(self, x_in):
-        x = self.channel_trans(x_in)
-        x = self.conv_out1(x)
+        x = self.res(x_in)
         out = self.conv_out4(x)
         return x,out
     
