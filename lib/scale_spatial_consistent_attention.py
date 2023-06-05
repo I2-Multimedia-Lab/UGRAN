@@ -33,7 +33,8 @@ class SSCA(nn.Module):
         self.conv_out4 = Conv2d(depth, 1, 1)
 
         self.forward = self._forward
-        
+        if self.forward == self._ablation:
+            self.res = Conv2d(in_channel,depth,1)
     def initialize(self):
         weight_init(self)
 
@@ -54,8 +55,8 @@ class SSCA(nn.Module):
         return x,out
 
     def _ablation(self, x_in):
-        x = self.channel_trans(x_in)
-        x = self.conv_out1(x)
+        x = self.res(x_in)
+
         out = self.conv_out4(x)
         return x,out
     
@@ -68,16 +69,10 @@ class SA(nn.Module):
         self.num_heads = num_heads
         self.ratio = sr_ratio
         self.scale = qk_scale if qk_scale != None else dim ** -0.5
-        if sr_ratio == 1:
-            self.spatial_reduce = nn.Sequential(
-                nn.ConvTranspose2d(dim,dim,self.ratio,2,output_padding=(1,1)),
-                nn.BatchNorm2d(dim),
-            )
-        else:
-            self.spatial_reduce = nn.Sequential(
-                nn.Conv2d(dim,dim,self.ratio//2,self.ratio//2),
-                nn.BatchNorm2d(dim),
-            )
+        self.spatial_reduce = nn.Sequential(
+            nn.Conv2d(dim,dim,self.ratio*2,self.ratio,padding=(self.ratio//2,self.ratio//2)),
+            nn.BatchNorm2d(dim),
+        )
         self.norm = nn.LayerNorm(dim)
         self.q = nn.Linear(dim, dim, bias=qkv_bias)
         self.kv = nn.Linear(dim, dim*2, bias=qkv_bias)
@@ -108,7 +103,7 @@ class SA(nn.Module):
         B, N, C = x.shape
         q = self.q(x).reshape(B, N, self.num_heads, C // self.num_heads).permute(0, 2, 1, 3)
 
-        if self.ratio > 2:
+        if self.ratio > 1:
             x_ = x.permute(0, 2, 1).reshape(B, C, H, W)
             x_ = self.spatial_reduce(x_).reshape(B, C, -1).permute(0, 2, 1)
             x_ = self.norm(x_)
