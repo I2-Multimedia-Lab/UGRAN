@@ -17,7 +17,7 @@ class M3Net(nn.Module):
         method (string): Backbone used as the encoder.
     """
 
-    def __init__(self,dim=64,img_size=384,method='M3Net-S'):
+    def __init__(self,dim=64,img_size=384,method='M3Net-S',mode='train'):
         super(M3Net, self).__init__()
         if img_size == 384:
             self.window_size=12
@@ -37,7 +37,7 @@ class M3Net(nn.Module):
 
         elif method == 'M3Net-R':
             self.encoder = ResNet()
-            self.decoder = decoder(in_channels = [64,256,512,1024,2048],base_size=[img_size,img_size],window_size=self.window_size)
+            self.decoder = decoder(in_channels = [64,256,512,1024,2048],base_size=[img_size,img_size],window_size=self.window_size,mode=mode)
 
         elif method == 'M3Net-R2':
             self.encoder = res2net50_v1b_26w_4s()

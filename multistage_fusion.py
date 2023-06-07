@@ -18,12 +18,13 @@ class decoder(nn.Module):
         img_size (int): Input image size. Default 224
         mlp_ratio (float): Ratio of mlp hidden dim to embedding dim.
     """
-    def __init__(self,in_channels = [128,128,256,512,1024],depth=64, base_size=[384, 384], window_size = 12):
+    def __init__(self,in_channels = [128,128,256,512,1024],depth=64, base_size=[384, 384], window_size = 12, mode='train'):
         super(decoder, self).__init__()
         self.in_channels = in_channels
         self.depth = depth
         self.base_size = base_size
-        
+        self.mode = mode
+
         #self.context1 = MFE(in_channel=self.in_channels[0],h_channel=self.in_channels[1], out_channel = self.depth, base_size=self.base_size, stage=2)
         '''
         self.context2 = MFE(in_channel=self.in_channels[1],l_channel=self.in_channels[0],h_channel=self.in_channels[2], out_channel=self.depth, base_size=self.base_size, stage=2)
@@ -55,6 +56,7 @@ class decoder(nn.Module):
         self.des = lambda x, size: F.interpolate(x, size=size, mode='nearest')
 
         #self.initialize()
+
 
     '''
     def to(self, device):
@@ -98,18 +100,23 @@ class decoder(nn.Module):
 
         f3 = self.res(f3, (H // 4,  W // 4 ))
         f2, s2 = self.fusion2(torch.cat([x2,f3],dim=1))
-        f2, d2, c2 = self.attention0(f2, l, s3)
-        #d2 = self.res(d3, (H//4,W//4))+p2
+        f2, d2, c2 = self.attention2(f2, l, s3)
+        if self.mode == 'train':
+            #f2 = self.res(f2, (H // 2, W // 2))
+            #l = self.res(l, (H // 2, W // 2))
+            f1, d1, c1 = self.attention1(f2,l,d2) #2
 
-        #f2 = self.res(f2, (H // 2, W // 2))
-        #l = self.res(l, (H // 2, W // 2))
-        f1, d1, c1 = self.attention0(f2,l,d2) #2
-        #d1 = self.res(d2, (H//2,W//2))+p1
+            #f1 = self.res(f1, (H, W))
+            #l = self.res(l, (H, W))
+            _, d0, c0 = self.attention0(f1,l,d1) #2
+        else:
+            f2 = self.res(f2, (H // 2, W // 2))
+            l = self.res(l, (H // 2, W // 2))
+            f1, d1, c1 = self.attention1(f2,l,d2) #2
 
-        #f1 = self.res(f1, (H, W))
-        #l = self.res(l, (H, W))
-        _, d0, c0 = self.attention0(f1,l,d1) #2
-        #d0 = self.res(d1, (H,W))+p0
+            f1 = self.res(f1, (H, W))
+            l = self.res(l, (H, W))
+            _, d0, c0 = self.attention0(f1,l,d1) #2
 
         '''
         xx = p1.detach().cpu().squeeze()
