@@ -61,7 +61,7 @@ class URA(nn.Module):
     def _forward(self, x, l, map_s,map_l=None):
         
         H,W  = x.shape[-2:]
-        map_s = F.interpolate(map_s, size=x.shape[-2:], mode='bilinear', align_corners=False)
+        map_s = F.interpolate(map_s, size=(self.base_size[0]//4,self.base_size[1]//4), mode='bilinear', align_corners=False)
         map_s = torch.sigmoid(map_s)
         p = map_s - self.threshold
         #fg = torch.clip(p, 0, 1) # foreground
@@ -69,10 +69,9 @@ class URA(nn.Module):
         cg = self.threshold - torch.abs(p) # confusion area
 
         x_uncertain = l*cg
-        
         B,C,H,W = x.shape
         x_ = x.reshape(B,C,-1).transpose(1,2)
-        x_uncertain = F.interpolate(x_uncertain,size=(self.base_size[0]//4,self.base_size[1]//4)).reshape(B, C, -1).permute(0, 2, 1)
+        x_uncertain = x_uncertain.reshape(B, C, -1).permute(0, 2, 1)
         q = self.q(x_)
         k = self.k(x_uncertain)
         v = self.v(x_uncertain)

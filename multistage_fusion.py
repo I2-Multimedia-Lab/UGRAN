@@ -111,11 +111,11 @@ class decoder(nn.Module):
             _, d0, c0 = self.attention0(f1,l,d1) #2
         else:
             f2 = self.res(f2, (H // 2, W // 2))
-            l = self.res(l, (H // 2, W // 2))
+            #l = self.res(l, (H // 2, W // 2))
             f1, d1, c1 = self.attention1(f2,l,d2) #2
 
             f1 = self.res(f1, (H, W))
-            l = self.res(l, (H, W))
+            #l = self.res(l, (H, W))
             _, d0, c0 = self.attention0(f1,l,d1) #2
 
         '''
