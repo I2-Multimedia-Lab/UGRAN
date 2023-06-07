@@ -3,6 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 #from Models.modules import *
 from .modules import *
+import cv2
+import numpy as np
 class URA(nn.Module):
     # Window-based Context Attention
     def __init__(self, in_channel, out_channel=1, depth=64, base_size=[384,384], window_size = 12, c_num=3, stage=None):
@@ -19,6 +21,12 @@ class URA(nn.Module):
         self.channel_trans = Conv2d(c_num,depth,1)
         self.threshold = 0.5
         #self.lthreshold = nn.Parameter(torch.tensor([0.5]))
+
+        k = cv2.getGaussianKernel(7, 1)
+        k = np.outer(k, k)
+        k = torch.tensor(k).float()
+        self.kernel = k.repeat(1, 1, 1, 1).cuda()
+
 
         # define a parameter table of relative position bias
         self.relative_position_bias_table = nn.Parameter(
@@ -55,18 +63,22 @@ class URA(nn.Module):
 
         self.forward = self._forward
 
+    def get_uncertain(self,smap):
+        smap = F.interpolate(smap, size=(self.base_size[0]//4,self.base_size[1]//4), mode='bilinear', align_corners=False)
+        smap = torch.sigmoid(smap)
+        p = smap - self.threshold
+        cg = self.threshold - torch.abs(p)
+        cg = F.pad(cg, (7 // 2, ) * 4, mode='reflect')
+        cg = F.conv2d(cg, self.kernel * 4, groups=1)
+        return cg/cg.max()
+
     def initialize(self):
         weight_init(self)
         
     def _forward(self, x, l, map_s,map_l=None):
         
         H,W  = x.shape[-2:]
-        map_s = F.interpolate(map_s, size=(self.base_size[0]//4,self.base_size[1]//4), mode='bilinear', align_corners=False)
-        map_s = torch.sigmoid(map_s)
-        p = map_s - self.threshold
-        #fg = torch.clip(p, 0, 1) # foreground
-        #bg = torch.clip(-p, 0, 1) # background
-        cg = self.threshold - torch.abs(p) # confusion area
+        cg = self.get_uncertain(map_s)
 
         x_uncertain = l*cg
         B,C,H,W = x.shape
