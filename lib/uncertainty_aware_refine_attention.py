@@ -63,8 +63,8 @@ class URA(nn.Module):
 
         self.forward = self._forward
 
-    def get_uncertain(self,smap):
-        smap = F.interpolate(smap, size=(self.base_size[0]//4,self.base_size[1]//4), mode='bilinear', align_corners=False)
+    def get_uncertain(self,smap,shape):
+        smap = F.interpolate(smap, size=shape, mode='bilinear', align_corners=False)
         smap = torch.sigmoid(smap)
         p = smap - self.threshold
         cg = self.threshold - torch.abs(p)
@@ -76,12 +76,15 @@ class URA(nn.Module):
         weight_init(self)
         
     def _forward(self, x, l, map_s,map_l=None):
-        
-        H,W  = x.shape[-2:]
-        cg = self.get_uncertain(map_s)
 
-        x_uncertain = l*cg
         B,C,H,W = x.shape
+        cg = self.get_uncertain(map_s,(H,W))
+
+        x_uncertain = l
+        cg_ = cg.reshape(B,1,-1).transpose(1,2)
+        
+        mask = cg_ @ cg_.transpose(1,2)
+        mask = torch.log(mask)
         x_ = x.reshape(B,C,-1).transpose(1,2)
         x_uncertain = x_uncertain.reshape(B, C, -1).permute(0, 2, 1)
         q = self.q(x_)
@@ -90,7 +93,7 @@ class URA(nn.Module):
         attn = q @ k.transpose(-2, -1)
         attn = (self.depth ** -.5) * attn
 
-        attn = F.softmax(attn, dim=-1)
+        attn = F.softmax(attn+mask, dim=-1)
         
         attn = (attn @ v).transpose(1,2).reshape(B,C,H,W)
         attn = self.conv_out1(attn)
