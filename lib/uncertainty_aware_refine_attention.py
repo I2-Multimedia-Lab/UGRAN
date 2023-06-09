@@ -76,28 +76,33 @@ class URA(nn.Module):
         weight_init(self)
         
     def _forward(self, x, l, map_s,map_l=None):
-
+        
         B,C,H,W = x.shape
         cg = self.get_uncertain(map_s,(H,W))
 
         x_uncertain = l
-        cg_ = F.interpolate(cg,size=l.shape[-2:])
         
-        mask = cg.reshape(B,1,-1).transpose(1,2) @ cg_.reshape(B,1,-1)
-        mask = torch.log(mask+0.5)
-        x_ = x.reshape(B,C,-1).transpose(1,2)
-        x_uncertain = x_uncertain.reshape(B, C, -1).permute(0, 2, 1)
-        q = self.q(x_)
-        k = self.k(x_uncertain)
-        v = self.v(x_uncertain)
+        #cg_windows = window_partition(cg,self.window_size).flatten(2).transpose(1,2)
+        x_windows = window_partition(x,self.window_size).flatten(2).transpose(1,2)
+        c_windows = window_partition(x_uncertain,self.window_size).flatten(2).transpose(1,2)
+        b = x_windows.shape[0]
+        q = self.q(x_windows)
+        k = self.k(c_windows)
+        v = self.v(c_windows)
         attn = q @ k.transpose(-2, -1)
         attn = (self.depth ** -.5) * attn
 
-        attn = F.softmax(attn+mask, dim=-1)
+        #relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
+        #    self.window_size * self.window_size, self.window_size * self.window_size, -1)  # Wh*Ww,Wh*Ww,nH
+        #relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
+        #attn = attn + relative_position_bias#.unsqueeze(0)
+
+        attn = F.softmax(attn, dim=-1)
         
-        attn = (attn @ v).transpose(1,2).reshape(B,C,H,W)
-        attn = self.conv_out1(attn)
-        x = x+attn
+        attn = (attn @ v).view(b, -1, self.window_size, self.window_size)
+        x_reverse = window_reverse(attn,self.window_size,H,W)
+        x_reverse = self.conv_out1(x_reverse)
+        x = x+x_reverse
         
         #x = self.conv_out2(x)
         x = self.conv_out3(x)
