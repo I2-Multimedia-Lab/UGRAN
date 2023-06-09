@@ -81,10 +81,10 @@ class URA(nn.Module):
         cg = self.get_uncertain(map_s,(H,W))
 
         x_uncertain = l
-        cg_ = cg.reshape(B,1,-1).transpose(1,2)
+        cg_ = F.interpolate(cg,size=l.shape[-2:])
         
-        mask = cg_ @ cg_.transpose(1,2)
-        mask = torch.log(mask)
+        mask = cg.reshape(B,1,-1).transpose(1,2) @ cg_.reshape(B,1,-1)
+        mask = torch.log(mask+0.5)
         x_ = x.reshape(B,C,-1).transpose(1,2)
         x_uncertain = x_uncertain.reshape(B, C, -1).permute(0, 2, 1)
         q = self.q(x_)
