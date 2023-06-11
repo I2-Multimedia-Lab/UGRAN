@@ -82,7 +82,7 @@ class URA(nn.Module):
 
         x_uncertain = l
         
-        #cg_windows = window_partition(cg,self.window_size).flatten(2).transpose(1,2)
+        cg_windows = window_partition(cg,self.window_size).flatten(2).transpose(1,2)
         x_windows = window_partition(x,self.window_size).flatten(2).transpose(1,2)
         c_windows = window_partition(x_uncertain,self.window_size).flatten(2).transpose(1,2)
         b = x_windows.shape[0]
@@ -92,6 +92,8 @@ class URA(nn.Module):
         attn = q @ k.transpose(-2, -1)
         attn = (self.depth ** -.5) * attn
 
+        cg_ = cg_windows @ cg_windows.transpose(1,2)+0.5
+        attn=attn+torch.log(cg_)
         #relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
         #    self.window_size * self.window_size, self.window_size * self.window_size, -1)  # Wh*Ww,Wh*Ww,nH
         #relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
