@@ -77,6 +77,35 @@ class URA(nn.Module):
     def initialize(self):
         weight_init(self)
         
+    '''
+    B, C, H, W = x.shape
+    x = x.view(B, C, H // window_size, window_size, W // window_size, window_size)
+    windows = x.permute(0, 1, 2, 4, 3, 5).contiguous().view(-1, C, window_size, window_size)    
+    '''
+    def DWPA(self, x, l, umap):
+        B,C,H,W = x.shape
+        h,w = [H//2,W//2]
+        x_w = x.view(B,C,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,C,h,w)
+        l_w = l.view(B,C,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,C,h,w)
+        u_w = umap.view(B,1,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,1,h,w)
+        for i in range(0,4):
+            #p = np.random.rand()
+            #print(p)
+            if H > 12:
+                x_w[i] = self.DWPA(x_w[i],l_w[i],u_w[i])
+            else:
+                #x_w = x_w.view(-1,C,h,w)
+                #l_w = l_w.view(-1,C,h,w)
+                #u_w = u_w.view(-1,C,h,w)
+                q= self.q(x_w[i].flatten(-2).transpose(-1,-2))
+                k = self.k(l_w[i].flatten(-2).transpose(-1,-2))
+                v = self.v(l_w[i].flatten(-2).transpose(-1,-2))
+                attn = q @ k.transpose(-2,-1)
+                attn = (self.depth ** -.5) * attn
+                attn = (attn @ v).transpose(-2,-1).view(B, C, h, w)
+                attn = self.conv_out1(attn)
+                x_w[i] += attn
+        return x_w.permute(1,2,0,3,4).view(B,C,2,2,h,w).permute(0,1,2,4,3,5).reshape(B,C,H,W)
     def _forward(self, x, l, map_s,map_l=None):
         
         B,C,H,W = x.shape
@@ -102,8 +131,7 @@ class URA(nn.Module):
         #attn = attn + relative_position_bias#.unsqueeze(0)
 
         attn = F.softmax(attn, dim=-1)
-        
-        attn = (attn @ v).view(b, -1, self.window_size, self.window_size)
+        attn = (attn @ v).transpose(1,2).view(b, -1, self.window_size, self.window_size)
         x_reverse = window_reverse(attn,self.window_size,H,W)
         x_reverse = self.conv_out1(x_reverse)
         x = x+x_reverse
@@ -114,6 +142,18 @@ class URA(nn.Module):
 
         return x, out, cg
     
+    def __forward(self,x,l,map_s,map_l=None):
+                
+        B,C,H,W = x.shape
+        cg = self.get_uncertain(map_s,(H,W))
+
+        x = self.DWPA(x,l,cg)
+        
+        #x = self.conv_out2(x)
+        x = self.conv_out3(x)
+        out = self.conv_out4(x)
+
+        return x, out, cg
     def _ablation(self,x, map_s,map_l=None):
         out = self.conv_out4(x)
         return x, out, out
@@ -152,6 +192,6 @@ def window_reverse(windows, window_size, H, W):
     x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, H, W, -1)
     """
     B = int(windows.shape[0] / (H * W / window_size / window_size))
-    x = windows.view(B, -1, H // window_size, W // window_size, window_size, window_size)
+    x = windows.reshape(B, -1, H // window_size, W // window_size, window_size, window_size)
     x = x.permute(0, 1, 2, 4, 3, 5).contiguous().view(B, -1, H, W)
     return x
