@@ -97,12 +97,20 @@ if __name__ == '__main__':
     x = model(f.cuda())
     for m in x:
         print(m.shape)
-    
+    print(model.decoder.attention0.ptime)
+    print(model.decoder.attention0.rtime)
+    print(model.decoder.attention0.etime)
+    print(model.decoder.attention1.ptime)
+    print(model.decoder.attention1.rtime)
+    print(model.decoder.attention1.etime)
+    print(model.decoder.attention2.ptime)
+    print(model.decoder.attention2.rtime)
+    print(model.decoder.attention2.etime)
     import torch
     from ptflops import get_model_complexity_info
 
-    macs, params = get_model_complexity_info(model, (3, 384, 384), as_strings=True, print_per_layer_stat=True, verbose=True)
+    #macs, params = get_model_complexity_info(model, (3, 384, 384), as_strings=True, print_per_layer_stat=True, verbose=True)
 
-    print('{:<30}  {:<8}'.format('macs: ', macs))
-    print('{:<30}  {:<8}'.format('parameters: ', params))
+    #print('{:<30}  {:<8}'.format('macs: ', macs))
+    #print('{:<30}  {:<8}'.format('parameters: ', params))
     

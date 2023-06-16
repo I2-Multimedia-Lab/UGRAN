@@ -5,6 +5,8 @@ import torch.nn.functional as F
 from .modules import *
 import cv2
 import numpy as np
+import datetime
+import time
 class URA(nn.Module):
     # Window-based Context Attention
     def __init__(self, in_channel, out_channel=1, depth=64, base_size=[384,384], window_size = 12, c_num=3, stage=None):
@@ -63,7 +65,11 @@ class URA(nn.Module):
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         self.conv_out4 = Conv2d(depth, out_channel, 1)
 
-        self.forward = self._forward
+        self.forward = self.__forward
+
+        self.ptime = 0.0
+        self.rtime = 0.0
+        self.etime = 0.0
 
     def get_uncertain(self,smap,shape):
         smap = F.interpolate(smap, size=shape, mode='bilinear', align_corners=False)
@@ -85,18 +91,22 @@ class URA(nn.Module):
     def DWPA(self, x, l, umap):
         B,C,H,W = x.shape
         h,w = [H//2,W//2]
+        st = time.process_time()
         x_w = x.view(B,C,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,C,h,w)
         l_w = l.view(B,C,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,C,h,w)
         u_w = umap.view(B,1,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,1,h,w)
+        et = time.process_time()
+        self.ptime+=(et-st)
         for i in range(0,4):
             #p = np.random.rand()
             #print(p)
-            if H > 12:
+            if h > 48: # partition or not
                 x_w[i] = self.DWPA(x_w[i],l_w[i],u_w[i])
             else:
                 #x_w = x_w.view(-1,C,h,w)
                 #l_w = l_w.view(-1,C,h,w)
                 #u_w = u_w.view(-1,C,h,w)
+                st = time.process_time()
                 q= self.q(x_w[i].flatten(-2).transpose(-1,-2))
                 k = self.k(l_w[i].flatten(-2).transpose(-1,-2))
                 v = self.v(l_w[i].flatten(-2).transpose(-1,-2))
@@ -105,7 +115,13 @@ class URA(nn.Module):
                 attn = (attn @ v).transpose(-2,-1).view(B, C, h, w)
                 attn = self.conv_out1(attn)
                 x_w[i] += attn
-        return x_w.permute(1,2,0,3,4).view(B,C,2,2,h,w).permute(0,1,2,4,3,5).reshape(B,C,H,W)
+                et = time.process_time()
+                self.etime += (et-st)
+        st = time.process_time()
+        x_w = x_w.permute(1,2,0,3,4).view(B,C,2,2,h,w).permute(0,1,2,4,3,5).reshape(B,C,H,W)
+        et = time.process_time()
+        self.rtime+=(et-st)
+        return x_w
     def _forward(self, x, l, map_s,map_l=None):
         
         B,C,H,W = x.shape
@@ -113,9 +129,13 @@ class URA(nn.Module):
 
         x_uncertain = l
         
+        st = time.process_time()
         #cg_windows = window_partition(cg,self.window_size).flatten(2).transpose(1,2)
         x_windows = window_partition(self.norm(x),self.window_size).flatten(2).transpose(1,2)
         c_windows = window_partition(self.norm(x_uncertain),self.window_size).flatten(2).transpose(1,2)
+        et = time.process_time()
+        self.ptime+=(et-st)
+        st = time.process_time()
         b = x_windows.shape[0]
         q = self.q(x_windows)
         k = self.k(c_windows)
@@ -131,8 +151,13 @@ class URA(nn.Module):
         #attn = attn + relative_position_bias#.unsqueeze(0)
 
         attn = F.softmax(attn, dim=-1)
-        attn = (attn @ v).transpose(1,2).view(b, -1, self.window_size, self.window_size)
+        attn = (attn @ v).view(b, self.window_size, self.window_size, C)
+        et = time.process_time()
+        self.etime+=(et-st)        
+        st = time.process_time()
         x_reverse = window_reverse(attn,self.window_size,H,W)
+        et = time.process_time()
+        self.rtime+=(et-st)
         x_reverse = self.conv_out1(x_reverse)
         x = x+x_reverse
         
@@ -187,11 +212,13 @@ def window_reverse(windows, window_size, H, W):
 
     Returns:
         x: (B, H, W, C)
-    B = int(windows.shape[0] / (H * W / window_size / window_size))
-    x = windows.view(B, H // window_size, W // window_size, window_size, window_size, -1)
-    x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, H, W, -1)
     """
     B = int(windows.shape[0] / (H * W / window_size / window_size))
-    x = windows.reshape(B, -1, H // window_size, W // window_size, window_size, window_size)
+    x = windows.view(B, H // window_size, W // window_size, window_size, window_size, -1)
+    x = x.permute(0, 5, 1, 3, 2, 4).contiguous().view(B, -1, H, W)
+    """
+    B = int(windows.shape[0] / (H * W / window_size / window_size))
+    x = windows.view(B, -1, H // window_size, W // window_size, window_size, window_size)
     x = x.permute(0, 1, 2, 4, 3, 5).contiguous().view(B, -1, H, W)
+    """
     return x
