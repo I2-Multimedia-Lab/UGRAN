@@ -97,7 +97,7 @@ if __name__ == '__main__':
     x = model(f.cuda())
     for m in x:
         print(m.shape)
-    print(model.decoder.attention0.ptime)
+    '''print(model.decoder.attention0.ptime)
     print(model.decoder.attention0.rtime)
     print(model.decoder.attention0.etime)
     print(model.decoder.attention1.ptime)
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     print(model.decoder.attention1.etime)
     print(model.decoder.attention2.ptime)
     print(model.decoder.attention2.rtime)
-    print(model.decoder.attention2.etime)
+    print(model.decoder.attention2.etime)'''
     import torch
     from ptflops import get_model_complexity_info
 

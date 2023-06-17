@@ -124,10 +124,7 @@ class URA(nn.Module):
         #return x_w
 
     def DWPA_(self, x, l, umap):
-        if(type(x) == list):
-            x = torch.cat(x,dim=0)
-            l = torch.cat(l,dim=0)
-            umap = torch.cat(umap,dim=0)
+        
         B,C,H,W = x.shape
         #print(x.shape)
         #print()
@@ -153,9 +150,9 @@ class URA(nn.Module):
             #print(p)
             if h > 12: # partition or not
                 #self.DWPA(x_w[i],l_w[i],u_w[i])
-                plistx.append(x_w[i])
-                plistl.append(l_w[i])
-                plistu.append(u_w[i])
+                #plistx.append(x_w[i])
+                #plistl.append(l_w[i])
+                #plistu.append(u_w[i])
                 pid.append(i)
             else:
                 '''#x_w = x_w.view(-1,C,h,w)
@@ -172,28 +169,37 @@ class URA(nn.Module):
                 x_w[i] += attn
                 et = time.process_time()
                 self.etime += (et-st)'''
-                elistx.append(x_w[i])
-                elistl.append(l_w[i])
-                elistu.append(u_w[i])
+                #elistx.append(x_w[i])
+                #elistl.append(l_w[i])
+                #elistu.append(u_w[i])
                 eid.append(i)
                 #print(id(x_w[i]),id(elistx[-1]))
         #print(id(x_w[0]),id(x_w[-1]),id(x_w))
-        if(len(elistx)>0):
+        le = len(eid)
+        lp = len(pid)
+        #print(le,lp)
+        x_ = torch.split(x_w,1,0)
+        l_ = torch.split(l_w,1,0)
+        u_ = torch.split(u_w,1,0)
+        if(le>0):
             # execute current window
-            elistx = torch.cat(elistx,dim=0)
-            elistl = torch.cat(elistl,dim=0)
-            elistu = torch.cat(elistu,dim=0)
-            #print(elistx.shape)
-            q = self.q(elistx.flatten(-2).transpose(-1,-2))
-            k = self.k(elistl.flatten(-2).transpose(-1,-2))
-            v = self.v(elistl.flatten(-2).transpose(-1,-2))
+            #elistx = torch.cat(elistx,dim=0)
+            #elistl = torch.cat(elistl,dim=0)
+            #elistu = torch.cat(elistu,dim=0)
+            ex = torch.cat([x_[i] for i in eid],dim=0)
+            el = torch.cat([l_[i] for i in eid],dim=0)
+            #x_w = x_w.permute(eid[0],eid[1],eid[2],eid[3])
+   
+            q = self.q(ex.flatten(-2).transpose(-1,-2))
+            k = self.k(el.flatten(-2).transpose(-1,-2))
+            v = self.v(el.flatten(-2).transpose(-1,-2))
             attn = q @ k.transpose(-2,-1)
             attn = (self.depth ** -.5) * attn
             attn = (attn @ v).transpose(-2,-1).view(-1, C, h, w)
-            attn = self.conv_out1(attn)
-            elistx += attn
-            for i in range(0,len(eid)):
-                x_w[eid[i]] = elistx[i]
+            attn = self.conv_out1(attn).view(le,-1,C,h,w)
+            ex += attn
+            for i in range(0,le):
+                x_w[eid[i]] = ex[i]
             
             #for i in eid:
             #    print(i)
@@ -201,20 +207,26 @@ class URA(nn.Module):
             #print(x_w[eid[0]].min(),elistx[0].min())
                 
 
-        if(len(plistx)>0):
+        if(lp>0):
             # execute smaller window
             #plistx = torch.cat(plistx,dim=0)
             #plistl = torch.cat(plistl,dim=0)
             #plistu = torch.cat(plistu,dim=0)
-            plistx = self.DWPA_(plistx,plistl,plistu)
+
+            px = torch.cat([x_[i] for i in pid],dim=0).view(-1,C,h,w)
+            pl = torch.cat([l_[i] for i in pid],dim=0).view(-1,C,h,w)
+            pu = torch.cat([u_[i] for i in pid],dim=0).view(-1,1,h,w)
+            px = self.DWPA_(px,pl,pu)
+            px = px.view(lp,-1,C,h,w)
             for i in range(0,len(pid)):
-                x_w[pid[i]] = plistx[i]
+                x_w[pid[i]] = px[i]
             #for i in pid:
             #    print(i)
             #print(x_w[pid[0]].max(),plistx[0].max())
             #print(x_w[pid[0]].min(),plistx[0].min())
                 
         st = time.process_time()
+        #print(x_w.shape)
         x_w = x_w.permute(1,2,0,3,4).view(B,C,2,2,h,w).permute(0,1,2,4,3,5).reshape(B,C,H,W)
         et = time.process_time()
         self.rtime+=(et-st)
@@ -270,7 +282,7 @@ class URA(nn.Module):
         B,C,H,W = x.shape
         cg = self.get_uncertain(map_s,(H,W))
 
-        x = self.DWPA_(x,l,cg)
+        x = self.DWPA_(x,l.detach(),cg.detach())
         
         #x = self.conv_out2(x)
         x = self.conv_out3(x)
