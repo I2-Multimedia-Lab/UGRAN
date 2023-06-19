@@ -83,10 +83,7 @@ class URA(nn.Module):
         weight_init(self)
         
     def DWPA(self, x, l, umap):
-        
         B,C,H,W = x.shape
-        #print(x.shape)
-
         h,w = [H//2,W//2]
         st = time.process_time()
         x_w = x.view(B,C,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,C,h,w)
@@ -94,59 +91,27 @@ class URA(nn.Module):
         u_w = umap.view(B,1,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,1,h,w)
         et = time.process_time()
         self.ptime+=(et-st)
-
-        pid = []
-        eid= []
-
         for i in range(0,4):
             #p = np.random.rand()
             #print(p)
-            if (torch.sum(u_w[i]*100)/(h*w)<20 and h > 12) or h>48: # partition or not
-                pid.append(i)
+            if (torch.sum(u_w[i]*100)/(h*w)<20 and h > 24) or h > 96: # partition or not
+                x_w[i] = self.DWPA(x_w[i],l_w[i],u_w[i])
             else:
-                eid.append(i)
 
-        le = len(eid)
-        lp = len(pid)
-        #print(le,lp)
-        x_ = torch.split(x_w.clone(),1,0)
-        l_ = torch.split(l_w.clone(),1,0)
-        u_ = torch.split(u_w.clone(),1,0)
-        if(le>0):
-            # execute current window
-            st = time.process_time()
-            ex = torch.cat([x_[i] for i in eid],dim=0)
-            el = torch.cat([l_[i] for i in eid],dim=0)
-            eu = torch.cat([u_[i] for i in eid],dim=0).flatten(-2).transpose(-1,-2)
-            q = self.q(ex.flatten(-2).transpose(-1,-2))
-            k = self.k(el.flatten(-2).transpose(-1,-2))
-            v = self.v(el.flatten(-2).transpose(-1,-2))
-            attn = q @ k.transpose(-2,-1)
-            uattn = eu @ eu.transpose(-2,-1)
-            attn = (self.depth ** -.5) * attn       
-            attn=attn+uattn/uattn.max()*attn.max()
-            attn = (attn @ v).transpose(-2,-1).view(-1, C, h, w)
-            attn = self.conv_out1(attn).view(le,-1,C,h,w)
-            ex += attn
-            et = time.process_time()
-            self.etime+=(et-st)
-            for i in range(0,le):
-                x_w[eid[i]] = ex[i]
-            #for i in eid:
-            #    print(i)
-                
-        if(lp>0):
-            # execute smaller window
-            px = torch.cat([x_[i] for i in pid],dim=0).view(-1,C,h,w)
-            pl = torch.cat([l_[i] for i in pid],dim=0).view(-1,C,h,w)
-            pu = torch.cat([u_[i] for i in pid],dim=0).view(-1,1,h,w)
-            px = self.DWPA(px,pl,pu)
-            px = px.view(lp,-1,C,h,w)
-            for i in range(0,lp):
-                x_w[pid[i]] = px[i]
-            #for i in pid:
-            #    print(i)
-
+                st = time.process_time()
+                q= self.q(x_w[i].flatten(-2).transpose(-1,-2))
+                k = self.k(l_w[i].flatten(-2).transpose(-1,-2))
+                v = self.v(l_w[i].flatten(-2).transpose(-1,-2))
+                u = u_w[i].flatten(-2).transpose(-1,-2) 
+                attn = q @ k.transpose(-2,-1)
+                attn = (self.depth ** -.5) * attn
+                uattn = u @ u.transpose(-2,-1)
+                attn=attn+uattn/uattn.max()*attn.max()
+                attn = (attn @ v).transpose(-2,-1).view(B, C, h, w)
+                attn = self.conv_out1(attn)
+                x_w[i] += attn
+                et = time.process_time()
+                self.etime += (et-st)
         st = time.process_time()
         x_w = x_w.permute(1,2,0,3,4).view(B,C,2,2,h,w).permute(0,1,2,4,3,5).reshape(B,C,H,W)
         et = time.process_time()
