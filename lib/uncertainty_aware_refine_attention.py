@@ -101,7 +101,7 @@ class URA(nn.Module):
         for i in range(0,4):
             #p = np.random.rand()
             #print(p)
-            if (torch.sum(u_w[i]*100)/(h*w)<5 and h > 12) or h>96: # partition or not
+            if (torch.sum(u_w[i]*100)/(h*w)<20 and h > 12) or h>48: # partition or not
                 pid.append(i)
             else:
                 eid.append(i)
@@ -117,12 +117,14 @@ class URA(nn.Module):
             st = time.process_time()
             ex = torch.cat([x_[i] for i in eid],dim=0)
             el = torch.cat([l_[i] for i in eid],dim=0)
-   
+            eu = torch.cat([u_[i] for i in eid],dim=0).flatten(-2).transpose(-1,-2)
             q = self.q(ex.flatten(-2).transpose(-1,-2))
             k = self.k(el.flatten(-2).transpose(-1,-2))
             v = self.v(el.flatten(-2).transpose(-1,-2))
             attn = q @ k.transpose(-2,-1)
-            attn = (self.depth ** -.5) * attn
+            uattn = eu @ eu.transpose(-2,-1)
+            attn = (self.depth ** -.5) * attn       
+            attn=attn+uattn/uattn.max()*attn.max()
             attn = (attn @ v).transpose(-2,-1).view(-1, C, h, w)
             attn = self.conv_out1(attn).view(le,-1,C,h,w)
             ex += attn
