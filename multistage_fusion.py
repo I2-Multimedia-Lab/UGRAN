@@ -25,31 +25,19 @@ class decoder(nn.Module):
         self.base_size = base_size
         self.mode = mode
 
-        #self.context1 = MFE(in_channel=self.in_channels[0],h_channel=self.in_channels[1], out_channel = self.depth, base_size=self.base_size, stage=2)
-        '''
-        self.context2 = MFE(in_channel=self.in_channels[1],l_channel=self.in_channels[0],h_channel=self.in_channels[2], out_channel=self.depth, base_size=self.base_size, stage=2)
-        self.context3 = MFE(in_channel=self.in_channels[2],l_channel=self.in_channels[1],h_channel=self.in_channels[3], out_channel=self.depth, base_size=self.base_size, stage=3)
-        self.context4 = MFE(in_channel=self.in_channels[3],l_channel=self.in_channels[2],h_channel=self.in_channels[4], out_channel=self.depth, base_size=self.base_size, stage=4)
-        self.context5 = MFE(in_channel=self.in_channels[4],l_channel=self.in_channels[3],out_channel=self.depth, base_size=self.base_size, stage=5)
-        '''
         self.context5 = MIA(in_channel=in_channels[4],out_channel=depth,dim1=None,dim2=None,embed_dim=depth*16,num_heads=8,mlp_ratio=3)
         self.context4 = MIA(in_channel=in_channels[3],out_channel=depth,dim1=in_channels[4],dim2=None,embed_dim=depth*8,num_heads=4,mlp_ratio=3)
         self.context3 = MIA(in_channel=in_channels[2],out_channel=depth,dim1=in_channels[3],dim2=in_channels[4],embed_dim=depth*4,num_heads=2,mlp_ratio=3)
         self.context2 = MIA(in_channel=in_channels[1],out_channel=depth,dim1=in_channels[2],dim2=in_channels[3],dim3=in_channels[4],embed_dim=depth*2,num_heads=1,mlp_ratio=3)
 
-        #'''
-        #self.decoder = PAA_d(self.depth * 3, depth=self.depth, base_size=base_size, stage=2)
         self.fusion4 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*8,num_heads=4,stacked=1,stage=4)
         self.fusion3 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*4,num_heads=2,stacked=1,stage=3)
         self.fusion2 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*2,num_heads=1,stacked=1,stage=2)
-        #self.fusion1 = SSCA(self.depth*2,dim=self.in_channels[1],depth=self.depth,stage=1)
         self.proj = Conv2d(depth,1,1)
 
         self.attention0 = URA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=0)
         self.attention1 = URA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=1)
         self.attention2 = URA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=2)
-
-        #self.pc_loss_fn  = nn.L1Loss()
 
         self.ret = lambda x, target: F.interpolate(x, size=target.shape[-2:], mode='bilinear', align_corners=False)
         self.res = lambda x, size: F.interpolate(x, size=size, mode='bilinear', align_corners=False)
@@ -62,9 +50,6 @@ class decoder(nn.Module):
 
     def to(self, device):
         self.image_pyramid.to(device)
-        #self.transition0.to(device)
-        #self.transition1.to(device)
-        #self.transition2.to(device)
         super(decoder, self).to(device)
         return self
     
