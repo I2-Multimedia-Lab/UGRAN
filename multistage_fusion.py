@@ -55,12 +55,13 @@ class decoder(nn.Module):
         self.res = lambda x, size: F.interpolate(x, size=size, mode='bilinear', align_corners=False)
         self.des = lambda x, size: F.interpolate(x, size=size, mode='nearest')
 
+        self.image_pyramid = ImagePyramid(7, 1)
+        self.uthreshold = 0.5
+
         #self.initialize()
 
-
-    '''
     def to(self, device):
-        #self.image_pyramid.to(device)
+        self.image_pyramid.to(device)
         #self.transition0.to(device)
         #self.transition1.to(device)
         #self.transition2.to(device)
@@ -73,10 +74,10 @@ class decoder(nn.Module):
             
         self.to(device="cuda:{}".format(idx))
         return self
-    '''
+    
     def initialize(self):
         weight_init(self)
-    
+
     def forward(self, x):
         H, W = self.base_size
     
@@ -98,25 +99,33 @@ class decoder(nn.Module):
         f4 = self.res(f4,(H//8,W//8))
         f3, s3 = self.fusion3(torch.cat([x3,f4],dim=1))
 
-        f3 = self.res(f3, (H // 4,  W // 4 ))
+        f3 = self.res(f3, (H//4, W//4 ))
         f2, s2 = self.fusion2(torch.cat([x2,f3],dim=1))
-        f2, d2, c2 = self.attention2(f2, l, s3)
+        c2 = self.image_pyramid.get_uncertain(s2,(H//4, W//4))
+        f2, r2, c2 = self.attention2(f2, l.detach(), c2.detach())
+        d2 = self.image_pyramid.reconstruct(s2.detach(), r2) 
         if self.mode == 'train':
             #f2 = self.res(f2, (H // 2, W // 2))
             #l = self.res(l, (H // 2, W // 2))
-            f1, d1, c1 = self.attention1(f2,l,d2) #2
-
+            c2 = self.image_pyramid.get_uncertain(d2,(H//4, W //4))
+            f1, r1, c1 = self.attention1(f2,l.detach(),c2.detach()) 
+            d1 = self.image_pyramid.reconstruct(d2.detach(), r1) 
             #f1 = self.res(f1, (H, W))
             #l = self.res(l, (H, W))
-            _, d0, c0 = self.attention0(f1,l,d1) #2
+            c1 = self.image_pyramid.get_uncertain(d1,(H//4, W//4))
+            _, r0, c0 = self.attention0(f1,l.detach(),c1.detach()) #2
+            d0 = self.image_pyramid.reconstruct(d1.detach(), r0) 
         else:
-            f2 = self.res(f2, (H // 2, W // 2))
-            l = self.res(l, (H // 2, W // 2))
-            f1, d1, c1 = self.attention1(f2,l,d2) #2
-
+            f2 = self.res(f2, (H//2, W //2))
+            l = self.res(l, (H//2, W//2))
+            c2 = self.image_pyramid.get_uncertain(d2,(H//2, W//2))
+            f1, r1, c1 = self.attention1(f2,l.detach(),c2.detach()) 
+            d1 = self.image_pyramid.reconstruct(d2.detach(), r1) 
             f1 = self.res(f1, (H, W))
             l = self.res(l, (H, W))
-            _, d0, c0 = self.attention0(f1,l,d1) #2
+            c1 = self.image_pyramid.get_uncertain(d1,(H, W))
+            _, r0, c0 = self.attention0(f1,l.detach(),c1.detach()) #2
+            d0 = self.image_pyramid.reconstruct(d1.detach(), r0) 
 
         '''
         xx = p1.detach().cpu().squeeze()

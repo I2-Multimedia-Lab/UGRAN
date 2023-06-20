@@ -21,8 +21,7 @@ class URA(nn.Module):
         self.depth = depth
         self.window_size = base_size[0]//8
         self.channel_trans = Conv2d(c_num,depth,1)
-        self.threshold = 0.5
-        #self.lthreshold = nn.Parameter(torch.tensor([0.5]))
+        self.pthreshold = 5
         self.norm = nn.BatchNorm2d(depth)
         self.lnorm = nn.BatchNorm2d(depth)
         
@@ -70,15 +69,6 @@ class URA(nn.Module):
         self.rtime = 0.0
         self.etime = 0.0
 
-    def get_uncertain(self,smap,shape):
-        smap = F.interpolate(smap, size=shape, mode='bilinear', align_corners=False)
-        smap = torch.sigmoid(smap)
-        p = smap - self.threshold
-        cg = self.threshold - torch.abs(p)
-        cg = F.pad(cg, (7 // 2, ) * 4, 'constant', 0)
-        cg = F.conv2d(cg, self.kernel * 4, groups=1)
-        return cg/cg.max()
-
     def initialize(self):
         weight_init(self)
         
@@ -89,15 +79,25 @@ class URA(nn.Module):
         x_w = x.view(B,C,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,C,h,w)
         l_w = l.view(B,C,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,C,h,w)
         u_w = umap.view(B,1,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,1,h,w)
+        '''
+        p_w = p.view(B,1,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,1,h,w)
+        for i in range(0,4):
+            p_w[i][0][0][0] = 1
+            p_w[i][0][0][-1] = 1
+            p_w[i][0][0][:,0] = 1
+            p_w[i][0][0][:,-1] = 1
+        ''' 
         et = time.process_time()
         self.ptime+=(et-st)
         for i in range(0,4):
             #p = np.random.rand()
             #print(p)
-            if (torch.sum(u_w[i]*100)/(h*w)<20 and h > 24) or h > 96: # partition or not
+            p = torch.sum(u_w[i]*100)/(h*w)
+            #print(p)
+            if (p<self.pthreshold and h > 24) or h > 48: # partition or not
+                #x_w[i],p_w[i] = self.DWPA(x_w[i],l_w[i],u_w[i],p_w[i])
                 x_w[i] = self.DWPA(x_w[i],l_w[i],u_w[i])
             else:
-
                 st = time.process_time()
                 q= self.q(x_w[i].flatten(-2).transpose(-1,-2))
                 k = self.k(l_w[i].flatten(-2).transpose(-1,-2))
@@ -114,6 +114,7 @@ class URA(nn.Module):
                 self.etime += (et-st)
         st = time.process_time()
         x_w = x_w.permute(1,2,0,3,4).view(B,C,2,2,h,w).permute(0,1,2,4,3,5).reshape(B,C,H,W)
+        #p_w = p_w.permute(1,2,0,3,4).view(B,1,2,2,h,w).permute(0,1,2,4,3,5).reshape(B,1,H,W)
         et = time.process_time()
         self.rtime+=(et-st)
         return x_w
@@ -163,17 +164,17 @@ class URA(nn.Module):
 
         return x, out, cg
     
-    def __forward(self,x,l,smap):
+    def __forward(self,x,l,umap):
                 
         B,C,H,W = x.shape
-        cg = self.get_uncertain(smap,(H,W))
-
-        x = self.DWPA(x,l,cg.detach())
+        #umap = self.get_uncertain(smap,(H,W))
+        #p = torch.zeros((B,1,H,W))
+        x = self.DWPA(x,l,umap)
         
         x = self.conv_out3(x)
         out = self.conv_out4(x)
 
-        return x, out, cg
+        return x, out, umap
     def _ablation(self,x, map_s,map_l=None):
         out = self.conv_out4(x)
         return x, out, out
