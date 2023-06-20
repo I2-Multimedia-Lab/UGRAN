@@ -1,3 +1,5 @@
+import cv2
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -669,3 +671,65 @@ class ICE(nn.Module):
         channel_add_term = self.channel_add_conv(context)
 
         return x * channel_add_term
+
+class ImagePyramid:
+    def __init__(self, ksize=7, sigma=1, channels=1):
+        self.ksize = ksize
+        self.sigma = sigma
+        self.channels = channels
+        self.uthreshold = 0.5
+        k = cv2.getGaussianKernel(ksize, sigma)
+        k = np.outer(k, k)
+        k = torch.tensor(k).float()
+        self.kernel = k.repeat(channels, 1, 1, 1)
+        
+    def to(self, device):
+        self.kernel = self.kernel.to(device)
+        return self
+        
+    def cuda(self, idx=None):
+        if idx is None:
+            idx = torch.cuda.current_device()
+            
+        self.to(device="cuda:{}".format(idx))
+        return self
+
+    def expand(self, x):
+        z = torch.zeros_like(x)
+        x = torch.cat([x, z, z, z], dim=1)
+        x = F.pixel_shuffle(x, 2)
+        x = F.pad(x, (self.ksize // 2, ) * 4, mode='reflect')
+        x = F.conv2d(x, self.kernel * 4, groups=self.channels)
+        return x
+
+    def reduce(self, x):
+        x = F.pad(x, (self.ksize // 2, ) * 4, mode='reflect')
+        x = F.conv2d(x, self.kernel, groups=self.channels)
+        x = x[:, :, ::2, ::2]
+        return x
+
+    def deconstruct(self, x):
+        reduced_x = self.reduce(x)
+        expanded_reduced_x = self.expand(reduced_x)
+
+        if x.shape != expanded_reduced_x.shape:
+            expanded_reduced_x = F.interpolate(expanded_reduced_x, x.shape[-2:])
+
+        laplacian_x = x - expanded_reduced_x
+        return reduced_x, laplacian_x
+
+    def reconstruct(self, x, laplacian_x):
+        expanded_x = self.expand(x)
+        if laplacian_x.shape != expanded_x:
+            laplacian_x = F.interpolate(laplacian_x, expanded_x.shape[-2:], mode='bilinear', align_corners=True)
+  
+        return expanded_x + laplacian_x
+    
+    def get_uncertain(self,smap,shape):
+        smap = F.interpolate(smap, size=shape, mode='bilinear', align_corners=False)
+        smap = torch.sigmoid(smap)
+        p = smap - self.uthreshold
+        cg = self.uthreshold - torch.abs(p)
+        cg = F.pad(cg, (self.ksize // 2, ) * 4, 'constant', 0)
+        cg = F.conv2d(cg, self.kernel * 4, groups=1)
+        return cg/cg.max()

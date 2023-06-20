@@ -51,7 +51,7 @@ class M3Net(nn.Module):
 
         mask = self.decoder([fea_0,fea_1_4,fea_1_8,fea_1_16,fea_1_32])
         return mask
-    '''
+    
     def to(self, device):
         #self.image_pyramid.to(device)
         #self.transition0.to(device)
@@ -68,7 +68,7 @@ class M3Net(nn.Module):
             
         self.to(device="cuda:{}".format(idx))
         return self
-        '''
+        
     def initialize(self):
         weight_init(self)
     def flops(self):
