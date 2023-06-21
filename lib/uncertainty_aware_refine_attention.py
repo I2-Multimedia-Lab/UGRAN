@@ -65,7 +65,7 @@ class URA(nn.Module):
             #print(p)
             p = torch.sum(u_w[i])/(h*w)
             #print(p)
-            if (p<self.pthreshold and h > 24) or h > 48: # partition or not
+            if (p < self.pthreshold and h > 24) or h > 96: # partition or not
                 #x_w[i],p_w[i] = self.DWPA(x_w[i],l_w[i],u_w[i],p_w[i])
                 x_w[i] = self.DWPA(x_w[i],l_w[i],u_w[i])
             else:
@@ -73,16 +73,14 @@ class URA(nn.Module):
                 q = x_w[i].flatten(-2).transpose(-1,-2)
                 k = l_w[i].flatten(-2).transpose(-1,-2)
                 v = l_w[i].flatten(-2).transpose(-1,-2)
-                u = u_w[i].flatten(-2).transpose(-1,-2) 
-                umask = u @ u.transpose(-1,-2)           
-                attn_mask = (umask>self.pthreshold).bool()
-                new_attn_mask = torch.zeros_like(attn_mask, dtype=q.dtype)
-                new_attn_mask.masked_fill_(attn_mask, float("-1e10"))
-                attn,attnw = self.mha(q,k,v,attn_mask = new_attn_mask)
-                attn=torch.where(torch.isnan(attn),torch.full_like(attn,0),attn)
-                #print(attn)
+                #u = u_w[i].flatten(-2).transpose(-1,-2) 
+                #umask = u @ u.transpose(-1,-2)           
+                #attn_mask = (umask<0.01).bool()
+                
+                #new_attn_mask = torch.zeros_like(attn_mask, dtype=q.dtype)
+                #new_attn_mask.masked_fill_(attn_mask, float("-1e10"))
+                attn,_ = self.mha(q,k,v)#,attn_mask = new_attn_mask)
                 attn = self.conv_out1(attn).transpose(-2,-1).view(B, C, h, w)
-                #print(attn)
                 x_w[i] += attn
                 et = time.process_time()
                 self.etime += (et-st)
