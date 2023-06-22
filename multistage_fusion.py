@@ -87,31 +87,32 @@ class decoder(nn.Module):
         f3 = self.res(f3, (H//4, W//4 ))
         f2, s2 = self.fusion2(torch.cat([x2,f3],dim=1))
         c2 = self.image_pyramid.get_uncertain(s2,(H//4, W//4))
-        f2, r2, c2 = self.attention2(f2, l.detach(), c2.detach())
+        f2, r2, p2 = self.attention2(f2, l.detach(), c2.detach())
         d2 = self.image_pyramid.reconstruct(s2.detach(), r2) 
         if self.mode == 'train':
             #f2 = self.res(f2, (H // 2, W // 2))
             #l = self.res(l, (H // 2, W // 2))
             c2 = self.image_pyramid.get_uncertain(d2,(H//4, W //4))
-            f1, r1, c1 = self.attention1(f2,l.detach(),c2.detach()) 
+            f1, r1, p1 = self.attention1(f2,l.detach(),c2.detach()) 
             d1 = self.image_pyramid.reconstruct(d2.detach(), r1) 
             #f1 = self.res(f1, (H, W))
             #l = self.res(l, (H, W))
             c1 = self.image_pyramid.get_uncertain(d1,(H//4, W//4))
-            _, r0, c0 = self.attention0(f1,l.detach(),c1.detach()) #2
+            _, r0, p0 = self.attention0(f1,l.detach(),c1.detach()) #2
             d0 = self.image_pyramid.reconstruct(d1.detach(), r0) 
         else:
             f2 = self.res(f2, (H//2, W //2))
             l = self.res(l, (H//2, W//2))
             c2 = self.image_pyramid.get_uncertain(d2,(H//2, W//2))
-            f1, r1, c1 = self.attention1(f2,l.detach(),c2.detach()) 
+            f1, r1, p1 = self.attention1(f2,l.detach(),c2.detach()) 
             d1 = self.image_pyramid.reconstruct(d2.detach(), r1) 
             f1 = self.res(f1, (H, W))
             l = self.res(l, (H, W))
             c1 = self.image_pyramid.get_uncertain(d1,(H, W))
-            _, r0, c0 = self.attention0(f1,l.detach(),c1.detach()) #2
+            _, r0, p0 = self.attention0(f1,l.detach(),c1.detach()) #2
             d0 = self.image_pyramid.reconstruct(d1.detach(), r0) 
 
+        c0 = self.image_pyramid.get_uncertain(d2,(H, W))
         '''
         xx = p1.detach().cpu().squeeze()
         xx = xx-xx.min()
@@ -123,7 +124,7 @@ class decoder(nn.Module):
         cv2.imwrite('2.png',np.asarray(xx))
         ''' 
         
-        out = [c2,c1,c0,s4,s3,s2,d2,d1,d0]
+        out = [p2,p1,p0,c2,c1,c0,s4,s3,s2,d2,d1,d0]
     
         return out
 
