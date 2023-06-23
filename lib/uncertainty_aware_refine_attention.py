@@ -22,7 +22,7 @@ class URA(nn.Module):
         self.window_size = base_size[0]//8
         self.channel_trans = Conv2d(c_num,depth,1)
         self.pthreshold = 0.2
-        self.norm = nn.BatchNorm2d(depth)
+        self.norm = nn.LayerNorm(depth)
         self.lnorm = nn.BatchNorm2d(depth)
 
         self.mha = nn.MultiheadAttention(depth,1,batch_first=True)
@@ -78,7 +78,7 @@ class URA(nn.Module):
                 attn_mask = (umask<1).bool()
                 new_attn_mask = torch.zeros_like(attn_mask, dtype=q.dtype)
                 new_attn_mask.masked_fill_(attn_mask, float("-1e10"))
-                attn,_ = self.mha(q,k,v,attn_mask = new_attn_mask)
+                attn,_ = self.mha(self.norm(q.clone()),k,v,attn_mask = new_attn_mask)
                 attn = self.conv_out1(attn).transpose(-2,-1).view(B, C, h, w)
                 x_w[i] += attn
                 et = time.process_time()
@@ -102,7 +102,7 @@ class URA(nn.Module):
         _u=torch.where(umap>0.01,1.0,0.0)
         #print(torch.sum(_u)/(H*W))
 
-        x,p = self.DWPA(self.norm(x),l,_u,p)
+        x,p = self.DWPA(x,l,_u,p)
         
         x = self.conv_out3(x)
         out = self.conv_out4(x)
