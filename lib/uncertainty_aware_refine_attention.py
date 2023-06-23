@@ -102,7 +102,7 @@ class URA(nn.Module):
         _u=torch.where(umap>0.01,1.0,0.0)
         #print(torch.sum(_u)/(H*W))
 
-        x,p = self.DWPA(x,l,_u,p)
+        x,p = self.DWPA(self.norm(x),l,_u,p)
         
         x = self.conv_out3(x)
         out = self.conv_out4(x)
