@@ -18,7 +18,7 @@ def structure_loss(pred, mask, weight=None):
     if weight == None:
         weit = 1 + 5 * torch.abs(F.avg_pool2d(mask, kernel_size=31, stride=1, padding=15) - mask)
     else:
-        weit = 1 + 5 * weight
+        weit = 1 + 2 * weight
 
     new_gts = generate_smoothed_gt(mask)
     wbce = F.binary_cross_entropy_with_logits(pred, new_gts, reduction='none')
