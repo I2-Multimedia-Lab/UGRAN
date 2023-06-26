@@ -59,10 +59,12 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,train_size):
         
         loss = loss_weights[0] * loss0 + loss_weights[1] * loss1 + loss_weights[2] * loss2 + loss_weights[2] * loss2_ + loss_weights[3] * loss3 + loss_weights[4] * loss4
 
-        #scloss3 = consistent_loss(sal_1_8,sal_1_16.detach()) * 0.0001
-        #scloss2 = consistent_loss(sal_1_4,sal_1_8.detach()) * 0.0001
+        scloss3 = consistent_loss(sal_1_8,sal_1_16.detach()) * 0.0001
+        scloss2 = consistent_loss(sal_1_4,sal_1_8.detach()) * 0.0001
+        scloss1 = consistent_loss(mask_1_2,mask_1_4.detach()) * 0.0001
+        scloss0 = consistent_loss(mask_1_1,mask_1_2.detach()) * 0.0001
 
-        loss = loss# + scloss3 + scloss2
+        loss = loss + scloss3 + scloss2 + scloss1 + scloss0
 
         opt.zero_grad()
         loss.backward()
