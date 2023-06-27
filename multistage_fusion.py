@@ -124,7 +124,7 @@ class decoder(nn.Module):
         cv2.imwrite('2.png',np.asarray(xx))
         ''' 
         
-        out = [p2,p1,p0,c2,c1,c0,s4,s3,s2,d2,d1,d0]
+        out = [p2,p1,p0,c2,c1,c0,s4,s3,s2,r2,r1,r0,d2,d1,d0]
     
         return out
 
