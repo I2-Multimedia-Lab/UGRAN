@@ -53,10 +53,10 @@ class URA(nn.Module):
         
         p_w = p.view(B,1,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,1,h,w)
         for i in range(0,4):
-            p_w[i][0][0][0] = 1
-            p_w[i][0][0][-1] = 1
-            p_w[i][0][0][:,0] = 1
-            p_w[i][0][0][:,-1] = 1
+            p_w[i][0][0][0] = 0.6
+            p_w[i][0][0][-1] = 0.6
+            p_w[i][0][0][:,0] = 0.6
+            p_w[i][0][0][:,-1] = 0.6
         
         et = time.process_time()
         self.ptime+=(et-st)
@@ -96,7 +96,7 @@ class URA(nn.Module):
                 
         B,C,H,W = x.shape
         #umap = self.get_uncertain(smap,(H,W))
-        p = torch.zeros((B,1,H,W))
+        p = torch.ones((B,1,H,W))
         #print(torch.sum(umap)/(H*W))
         #_u = (umap>0).bool()
         _u=torch.where(umap>0.01,1.0,0.0)
