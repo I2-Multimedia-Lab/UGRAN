@@ -105,7 +105,6 @@ class URA(nn.Module):
         x,p = self.DWPA(x,l,_u,p)
         
         x = self.conv_out3(x)
-        x = x * _u
         out = self.conv_out4(x)
 
         return x, out, p

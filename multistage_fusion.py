@@ -43,7 +43,7 @@ class decoder(nn.Module):
         self.res = lambda x, size: F.interpolate(x, size=size, mode='bilinear', align_corners=False)
         self.des = lambda x, size: F.interpolate(x, size=size, mode='nearest')
 
-        self.image_pyramid = ImagePyramid(7, 1)
+        self.image_pyramid = ImagePyramid(15, 1)
         self.uthreshold = 0.5
 
         #self.initialize()
