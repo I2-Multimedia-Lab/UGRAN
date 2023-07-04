@@ -30,9 +30,9 @@ class decoder(nn.Module):
         self.context3 = MIA(in_channel=in_channels[2],out_channel=depth,dim1=in_channels[3],dim2=in_channels[4],embed_dim=depth*4,num_heads=2,mlp_ratio=3)
         self.context2 = MIA(in_channel=in_channels[1],out_channel=depth,dim1=in_channels[2],dim2=in_channels[3],dim3=in_channels[4],embed_dim=depth*2,num_heads=1,mlp_ratio=3)
 
-        self.fusion4 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*8,num_heads=4,stacked=1,stage=4)
-        self.fusion3 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*4,num_heads=2,stacked=1,stage=3)
-        self.fusion2 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*2,num_heads=1,stacked=1,stage=2)
+        self.fusion4 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*8,num_heads=4,stacked=2,stage=4)
+        self.fusion3 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*4,num_heads=2,stacked=2,stage=3)
+        self.fusion2 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*2,num_heads=1,stacked=2,stage=2)
         self.proj = Conv2d(depth,1,1)
 
         self.attention0 = URA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=0)
@@ -88,29 +88,29 @@ class decoder(nn.Module):
         f2, s2 = self.fusion2(torch.cat([x2,f3],dim=1))
         c2 = self.image_pyramid.get_uncertain(s2,(H//4, W//4))
         f2, r2, p2 = self.attention2(f2, l.detach(), c2.detach())
-        d2 = self.image_pyramid.reconstruct(s2.detach(), r2, c2) 
+        d2 = self.image_pyramid.reconstruct(s2.detach(), r2) 
         if self.mode == 'train':
             #f2 = self.res(f2, (H // 2, W // 2))
             #l = self.res(l, (H // 2, W // 2))
             c2 = self.image_pyramid.get_uncertain(d2,(H//4, W //4))
             f1, r1, p1 = self.attention1(f2,l.detach(),c2.detach()) 
-            d1 = self.image_pyramid.reconstruct(d2.detach(), r1, c2) 
+            d1 = self.image_pyramid.reconstruct(d2.detach(), r1) 
             #f1 = self.res(f1, (H, W))
             #l = self.res(l, (H, W))
             c1 = self.image_pyramid.get_uncertain(d1,(H//4, W//4))
             _, r0, p0 = self.attention0(f1,l.detach(),c1.detach()) #2
-            d0 = self.image_pyramid.reconstruct(d1.detach(), r0, c1) 
+            d0 = self.image_pyramid.reconstruct(d1.detach(), r0) 
         else:
             f2 = self.res(f2, (H//2, W //2))
             l = self.res(l, (H//2, W//2))
             c2 = self.image_pyramid.get_uncertain(d2,(H//2, W//2))
             f1, r1, p1 = self.attention1(f2,l.detach(),c2.detach()) 
-            d1 = self.image_pyramid.reconstruct(d2.detach(), r1, c2) 
+            d1 = self.image_pyramid.reconstruct(d2.detach(), r1) 
             f1 = self.res(f1, (H, W))
             l = self.res(l, (H, W))
             c1 = self.image_pyramid.get_uncertain(d1,(H, W))
             _, r0, p0 = self.attention0(f1,l.detach(),c1.detach()) #2
-            d0 = self.image_pyramid.reconstruct(d1.detach(), r0, c1) 
+            d0 = self.image_pyramid.reconstruct(d1.detach(), r0) 
 
         c0 = self.image_pyramid.get_uncertain(d2,(H, W))
         '''
