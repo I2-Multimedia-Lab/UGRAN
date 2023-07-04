@@ -718,12 +718,11 @@ class ImagePyramid:
         laplacian_x = x - expanded_reduced_x
         return reduced_x, laplacian_x
 
-    def reconstruct(self, x, laplacian_x):
-        expanded_x = self.expand(x)
-        if laplacian_x.shape != expanded_x:
-            laplacian_x = F.interpolate(laplacian_x, expanded_x.shape[-2:], mode='bilinear', align_corners=True)
-  
-        return expanded_x + laplacian_x
+    def reconstruct(self, smap, rmap, umap):
+        smap = F.interpolate(smap, rmap.shape[-2:], mode='bilinear', align_corners=True)
+        smap = smap * (1-umap)
+        rmap = rmap * umap
+        return smap+rmap
     
     def get_uncertain(self,smap,shape):
         smap = F.interpolate(smap, size=shape, mode='bilinear', align_corners=False)
