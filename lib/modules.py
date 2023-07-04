@@ -720,6 +720,8 @@ class ImagePyramid:
 
     def reconstruct(self, smap, rmap, umap):
         smap = F.interpolate(smap, rmap.shape[-2:], mode='bilinear', align_corners=True)
+        if torch.sum(umap)/(umap.shape[-1]*umap.shape[-2]) > 0.2 :
+           return smap+rmap
         smap = smap * (1-umap)
         rmap = rmap * umap
         return smap+rmap
