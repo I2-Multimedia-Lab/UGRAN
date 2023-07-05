@@ -3,11 +3,15 @@ import torch.nn as nn
 import torch.nn.functional as F
 #from Models.modules import *
 from .modules import *
+import cv2
+import numpy as np
+import datetime
+import time
 class URA(nn.Module):
     # Window-based Context Attention
     def __init__(self, in_channel, out_channel=1, depth=64, base_size=[384,384], window_size = 12, c_num=3, stage=None):
         super(URA, self).__init__()
-        
+        self.base_size=base_size
         if base_size is not None and stage is not None:
             self.stage_size = (base_size[0] // (2 ** stage), base_size[1] // (2 ** stage))
         else:
@@ -15,88 +19,95 @@ class URA(nn.Module):
         self.ratio = stage
         self.depth = depth
         self.depth = depth
-        self.window_size = window_size
+        self.window_size = base_size[0]//8
         self.channel_trans = Conv2d(c_num,depth,1)
-        self.threshold = 0.5
-        #self.lthreshold = nn.Parameter(torch.tensor([0.5]))
+        self.pthreshold = 0.2
+        self.norm = nn.BatchNorm2d(depth)
+        self.lnorm = nn.BatchNorm2d(depth)
 
-        # define a parameter table of relative position bias
-        self.relative_position_bias_table = nn.Parameter(
-            torch.zeros((2 * window_size - 1) * (2 * window_size - 1), 1))  # 2*Wh-1 * 2*Ww-1, nH
+        self.mha = nn.MultiheadAttention(depth,1,batch_first=True)
+        self.q = nn.Linear(depth,depth)
+        self.k = nn.Linear(depth,depth)
+        self.v = nn.Linear(depth,depth)
 
-        # get pair-wise relative position index for each token inside the window
-        coords_h = torch.arange(self.window_size)
-        coords_w = torch.arange(self.window_size)
-        coords = torch.stack(torch.meshgrid([coords_h, coords_w]))  # 2, Wh, Ww
-        coords_flatten = torch.flatten(coords, 1)  # 2, Wh*Ww
-        relative_coords = coords_flatten[:, :, None] - coords_flatten[:, None, :]  # 2, Wh*Ww, Wh*Ww
-        relative_coords = relative_coords.permute(1, 2, 0).contiguous()  # Wh*Ww, Wh*Ww, 2
-        relative_coords[:, :, 0] += self.window_size - 1  # shift to start from 0
-        relative_coords[:, :, 1] += self.window_size - 1
-        relative_coords[:, :, 0] *= 2 * self.window_size - 1
-        relative_position_index = relative_coords.sum(-1)  # Wh*Ww, Wh*Ww
-        self.register_buffer("relative_position_index", relative_position_index)
-
-        self.q = nn.Sequential(
-            nn.Linear(depth,depth)
-        )
-        self.k = nn.Sequential(
-            nn.Linear(depth,depth)
-        )
-        self.v = nn.Sequential(
-            nn.Linear(depth,depth)
-        )
-
-        self.conv_out1 = Conv2d(depth,depth,3,relu=True)
-        
-        #self.conv_out2 = Conv2d(in_channel+depth, depth, 3, relu=True)
+        self.conv_out1 = nn.Linear(depth,depth)
         self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
         self.conv_out4 = Conv2d(depth, out_channel, 1)
 
         self.forward = self._forward
 
+        self.ptime = 0.0
+        self.rtime = 0.0
+        self.etime = 0.0
+
     def initialize(self):
         weight_init(self)
         
-    def _forward(self, x, l, map_s,map_l=None):
+    def DWPA(self, x, l, umap, p):
+        B,C,H,W = x.shape
+        h,w = [H//2,W//2]
+        st = time.process_time()
+        x_w = x.view(B,C,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,C,h,w)
+        l_w = l.view(B,C,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,C,h,w)
+        u_w = umap.view(B,1,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,1,h,w)
         
-        H,W  = x.shape[-2:]
-        map_s = F.interpolate(map_s, size=x.shape[-2:], mode='bilinear', align_corners=False)
-        map_s = torch.sigmoid(map_s)
-        p = map_s - self.threshold
-        #fg = torch.clip(p, 0, 1) # foreground
-        #bg = torch.clip(-p, 0, 1) # background
-        cg = self.threshold - torch.abs(p) # confusion area
+        p_w = p.view(B,1,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,1,h,w)
+        for i in range(0,4):
+            p_w[i][0][0][0] = 0.6
+            p_w[i][0][0][-1] = 0.6
+            p_w[i][0][0][:,0] = 0.6
+            p_w[i][0][0][:,-1] = 0.6
+        
+        et = time.process_time()
+        self.ptime+=(et-st)
+        for i in range(0,4):
+            #p = np.random.rand()
+            #print(p)
+            p = torch.sum(u_w[i])/(h*w)
+            #print(p)
+            if (p < self.pthreshold and h > 24) or h > 96: # partition or not
+                x_w[i],p_w[i] = self.DWPA(x_w[i],l_w[i],u_w[i],p_w[i])
+                #x_w[i] = self.DWPA(x_w[i],l_w[i],u_w[i])
+            else:
+                st = time.process_time()
+                q = x_w[i].flatten(-2).transpose(-1,-2)
+                k = l_w[i].flatten(-2).transpose(-1,-2)
+                v = l_w[i].flatten(-2).transpose(-1,-2)
+                u = u_w[i].flatten(-2).transpose(-1,-2) 
+                umask = u @ u.transpose(-1,-2)           
+                attn_mask = (umask<1).bool()
+                new_attn_mask = torch.zeros_like(attn_mask, dtype=q.dtype)
+                new_attn_mask.masked_fill_(attn_mask, float("-1e10"))
+                attn,_ = self.mha(q,k,v,attn_mask = new_attn_mask)
+                attn = self.conv_out1(attn).transpose(-2,-1).view(B, C, h, w)
+                x_w[i] += attn
+                et = time.process_time()
+                self.etime += (et-st)
+        st = time.process_time()
+        x_w = x_w.permute(1,2,0,3,4).view(B,C,2,2,h,w).permute(0,1,2,4,3,5).reshape(B,C,H,W)
+        p_w = p_w.permute(1,2,0,3,4).view(B,1,2,2,h,w).permute(0,1,2,4,3,5).reshape(B,1,H,W)
+        et = time.process_time()
+        self.rtime+=(et-st)
+        return x_w,p_w
 
-        x_uncertain = l*cg
-        
-        x_windows = window_partition(x,self.window_size).flatten(2).transpose(1,2)
-        c_windows = window_partition(x_uncertain,self.window_size).flatten(2).transpose(1,2)
-        b = x_windows.shape[0]
-        q = self.q(x_windows)
-        k = self.k(c_windows)
-        v = self.v(c_windows)
-        attn = q @ k.transpose(-2, -1)
-        attn = (self.depth ** -.5) * attn
 
-        relative_position_bias = self.relative_position_bias_table[self.relative_position_index.view(-1)].view(
-            self.window_size * self.window_size, self.window_size * self.window_size, -1)  # Wh*Ww,Wh*Ww,nH
-        relative_position_bias = relative_position_bias.permute(2, 0, 1).contiguous()  # nH, Wh*Ww, Wh*Ww
-        attn = attn + relative_position_bias#.unsqueeze(0)
+    
+    def _forward(self,x,l,umap):
+                
+        B,C,H,W = x.shape
+        #umap = self.get_uncertain(smap,(H,W))
+        p = torch.ones((B,1,H,W))
+        #print(torch.sum(umap)/(H*W))
+        #_u = (umap>0).bool()
+        _u=torch.where(umap>0.01,1.0,0.0)
+        #print(torch.sum(_u)/(H*W))
 
-        attn = F.softmax(attn, dim=-1)
+        x,p = self.DWPA(x,l,_u,p)
         
-        attn = (attn @ v).view(b, -1, self.window_size, self.window_size)
-        x_reverse = window_reverse(attn,self.window_size,H,W)
-        x_reverse = self.conv_out1(x_reverse)
-        x = x+x_reverse
-        
-        #x = self.conv_out2(x)
         x = self.conv_out3(x)
         out = self.conv_out4(x)
 
-        return x, out, cg
-    
+        return x, out, p
     def _ablation(self,x, map_s,map_l=None):
         out = self.conv_out4(x)
         return x, out, out
@@ -130,11 +141,13 @@ def window_reverse(windows, window_size, H, W):
 
     Returns:
         x: (B, H, W, C)
+    """
     B = int(windows.shape[0] / (H * W / window_size / window_size))
     x = windows.view(B, H // window_size, W // window_size, window_size, window_size, -1)
-    x = x.permute(0, 1, 3, 2, 4, 5).contiguous().view(B, H, W, -1)
+    x = x.permute(0, 5, 1, 3, 2, 4).contiguous().view(B, -1, H, W)
     """
     B = int(windows.shape[0] / (H * W / window_size / window_size))
     x = windows.view(B, -1, H // window_size, W // window_size, window_size, window_size)
     x = x.permute(0, 1, 2, 4, 3, 5).contiguous().view(B, -1, H, W)
+    """
     return x
