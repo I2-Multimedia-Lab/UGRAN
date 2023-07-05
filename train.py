@@ -33,7 +33,7 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,train_size):
         #label = F.interpolate(label, (H//4,W//4), mode='nearest')
         #label = F.interpolate(label, (H//8,W//8), mode='nearest')
 
-        par_1_4,par_1_2,par_1_1,unc_1_4,unc_1_2,unc_1_1,sal_1_16, sal_1_8, sal_1_4, mask_1_4, mask_1_2, mask_1_1 = model(images)
+        par_1_4,par_1_2,par_1_1,unc_1_4,unc_1_2,unc_1_1,sal_1_16, sal_1_8, sal_1_4, ref_1_4, ref_1_2, ref_1_1, mask_1_4, mask_1_2, mask_1_1 = model(images)
         
         sal_1_16 = F.interpolate(sal_1_16,(H,W),mode='bilinear')
         sal_1_8 = F.interpolate(sal_1_8,(H,W),mode='bilinear')
@@ -146,11 +146,11 @@ class PolyLr(_LRScheduler):
 def train(args):
     model = M3Net(dim=64,img_size=args.img_size,method=args.method,mode='train')
     if args.method == 'M3Net-R':
-        model.encoder.load_state_dict(torch.load(args.pretrained_model), strict=False)
+        model.encoder.load_state_dict(torch.load(args.pretrained_model+'resnet50.pth'), strict=False)
     elif args.method == 'M3Net-R2':
-        model.encoder.load_state_dict(torch.load(args.pretrained_model, map_location='cpu'), strict=False)
+        model.encoder.load_state_dict(torch.load(args.pretrained_model+'res2net50_v1b_26w_4s-3cf99910.pth', map_location='cpu'), strict=False)
     elif args.method == 'M3Net-S':
-        model.encoder.load_state_dict(torch.load(args.pretrained_model, map_location='cpu')['model'], strict=False)
+        model.encoder.load_state_dict(torch.load(args.pretrained_model+'swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
 
     print('Pre-trained weight loaded.')
 
