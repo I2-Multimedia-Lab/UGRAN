@@ -30,9 +30,9 @@ class decoder(nn.Module):
         self.context3 = MIA(in_channel=in_channels[2],out_channel=depth,dim1=in_channels[3],dim2=in_channels[4],embed_dim=depth*4,num_heads=2,mlp_ratio=3)
         self.context2 = MIA(in_channel=in_channels[1],out_channel=depth,dim1=in_channels[2],dim2=in_channels[3],dim3=in_channels[4],embed_dim=depth*2,num_heads=1,mlp_ratio=3)
 
-        self.fusion4 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*8,num_heads=4,stacked=2,stage=4)
-        self.fusion3 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*4,num_heads=2,stacked=2,stage=3)
-        self.fusion2 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*2,num_heads=1,stacked=2,stage=2)
+        self.fusion4 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*8,num_heads=4,stacked=1,stage=4)
+        self.fusion3 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*4,num_heads=2,stacked=1,stage=3)
+        self.fusion2 = SSCA(in_channel=depth*2,depth=depth,dim=self.depth*2,num_heads=1,stacked=1,stage=2)
         self.proj = Conv2d(depth,1,1)
 
         self.attention0 = URA(self.depth, depth=self.depth, base_size=self.base_size, window_size=window_size,c_num=3, stage=0)
