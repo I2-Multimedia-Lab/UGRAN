@@ -165,7 +165,7 @@ def train(args):
     fit(model,train_dl,args.train_epochs,args.lr,args.img_size,args.record)
     if not os.path.exists(args.save_model):
         os.makedirs(args.save_model)
-    torch.save(model.state_dict(), args.save_model+args.method+'_upconv.pth')
+    torch.save(model.state_dict(), args.save_model+args.method+'.pth')
     print('Saved as '+args.save_model+args.method+'.pth.')
 
 if __name__ == '__main__':
