@@ -92,7 +92,7 @@ class URA(nn.Module):
 
 
     
-    def _forward(self,x,l,umap):
+    def _forward(self,x,l,umap,ratio=1):
                 
         B,C,H,W = x.shape
         #umap = self.get_uncertain(smap,(H,W))
@@ -103,10 +103,12 @@ class URA(nn.Module):
         #print(torch.sum(_u)/(H*W))
 
         x,p = self.DWPA(x,l,_u,p)
-        
+        if(ratio != 1):
+            x = F.interpolate(x, [H*ratio,W*ratio], mode='bilinear', align_corners=True)
         x = self.conv_out3(x)
         out = self.conv_out4(x)
-
+        if(ratio != 1):
+            x = F.interpolate(x, [H,W], mode='bilinear', align_corners=True)
         return x, out, p
     def _ablation(self,x, map_s,map_l=None):
         out = self.conv_out4(x)
