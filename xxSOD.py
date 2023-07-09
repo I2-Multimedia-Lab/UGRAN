@@ -17,7 +17,7 @@ class M3Net(nn.Module):
         method (string): Backbone used as the encoder.
     """
 
-    def __init__(self,dim=64,img_size=384,method='M3Net-S'):
+    def __init__(self,dim=64,img_size=384,method='M3Net-S',mode='train'):
         super(M3Net, self).__init__()
         if img_size == 384:
             self.window_size=12
@@ -27,9 +27,10 @@ class M3Net(nn.Module):
         self.feature_dims = []
         self.method = method
         self.dim = dim
+        self.mode = mode
         if method == 'M3Net-S':
             self.encoder = SwinTransformer(pretrain_img_size=img_size, 
-                                        embed_dim=dim,
+                                        embed_dim=128,
                                         depths=[2,2,18,2],
                                         num_heads=[4,8,16,32],
                                         window_size=self.window_size)
@@ -49,9 +50,9 @@ class M3Net(nn.Module):
         fea = self.encoder(x)
         fea_0,fea_1_4,fea_1_8,fea_1_16,fea_1_32 = fea
 
-        mask = self.decoder([fea_0,fea_1_4,fea_1_8,fea_1_16,fea_1_32])
+        mask = self.decoder([fea_0,fea_1_4,fea_1_8,fea_1_16,fea_1_32],self.mode)
         return mask
-    '''
+    
     def to(self, device):
         #self.image_pyramid.to(device)
         #self.transition0.to(device)
@@ -68,7 +69,7 @@ class M3Net(nn.Module):
             
         self.to(device="cuda:{}".format(idx))
         return self
-        '''
+        
     def initialize(self):
         weight_init(self)
     def flops(self):
@@ -87,7 +88,7 @@ class M3Net(nn.Module):
 #from thop import profile
 if __name__ == '__main__':
     # Test
-    model = M3Net(dim=64,img_size=384,method='M3Net-R')
+    model = M3Net(dim=64,img_size=384,method='M3Net-R',mode='train')
     #model.encoder.load_state_dict(torch.load('/mnt/ssd/yy/pretrained_model/resnet50.pth'), strict=False)
                                              #swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
     #model.load_state_dict(torch.load('/mnt/ssd/yy/xxSOD/savepth/M3Net-R_single.pth'))
@@ -95,14 +96,23 @@ if __name__ == '__main__':
     
     f = torch.randn((1,3,384,384))
     x = model(f.cuda())
+    print()
     for m in x:
         print(m.shape)
-    
+    '''print(model.decoder.attention0.ptime)
+    print(model.decoder.attention0.rtime)
+    print(model.decoder.attention0.etime)
+    print(model.decoder.attention1.ptime)
+    print(model.decoder.attention1.rtime)
+    print(model.decoder.attention1.etime)
+    print(model.decoder.attention2.ptime)
+    print(model.decoder.attention2.rtime)
+    print(model.decoder.attention2.etime)'''
     import torch
     from ptflops import get_model_complexity_info
 
-    macs, params = get_model_complexity_info(model, (3, 384, 384), as_strings=True, print_per_layer_stat=True, verbose=True)
+    #macs, params = get_model_complexity_info(model, (3, 384, 384), as_strings=True, print_per_layer_stat=True, verbose=True)
 
-    print('{:<30}  {:<8}'.format('macs: ', macs))
-    print('{:<30}  {:<8}'.format('parameters: ', params))
+    #print('{:<30}  {:<8}'.format('macs: ', macs))
+    #print('{:<30}  {:<8}'.format('parameters: ', params))
     

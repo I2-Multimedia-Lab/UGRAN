@@ -58,7 +58,7 @@ def get_pred_dir(model, data_root = '/home/yy/datasets/', save_path = 'preds/',i
 
 def test(args):
     print('Starting test.')
-    model = M3Net(dim=64,img_size=args.img_size,method=args.method)
+    model = M3Net(dim=64,img_size=args.img_size,method=args.method,mode='test')
     model.cuda()
     model.load_state_dict(torch.load(args.save_model+args.method+'.pth'))
     print('Weight is loaded from '+args.save_model+args.method+'.pth.')
