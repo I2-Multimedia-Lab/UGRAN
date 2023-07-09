@@ -49,7 +49,7 @@ class MIA(nn.Module):
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
         self.proj = Conv2d(self.embed_dim,out_channel,1)
         
-        self.forward = self._forward
+        self.forward = self._ablation
         if self.forward == self._ablation:
             self.res = Conv2d(in_channel,out_channel,1)
     def initialize(self):
