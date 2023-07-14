@@ -53,11 +53,11 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,train_size):
         #loss2 = structure_loss(mask_1_4, label, unc_1_4)#wbce(mask_1_4, label, unc_1_4) + iou_loss(mask_1_4, label)
         #loss1 = structure_loss(mask_1_2, label, unc_1_2)#wbce(mask_1_2, label, unc_1_2) + iou_loss(mask_1_2, label)
         #loss0 = structure_loss(mask_1_1, label, unc_1_1)#wbce(mask_1_1, label, unc_1_1) + iou_loss(mask_1_1, label)
-        #loss2 = F.binary_cross_entropy_with_logits(mask_1_4, label) + iou_loss(mask_1_4, label)
-        #loss1 = F.binary_cross_entropy_with_logits(mask_1_2, label) + iou_loss(mask_1_2, label)
-        #loss0 = F.binary_cross_entropy_with_logits(mask_1_1, label) + iou_loss(mask_1_1, label)
+        loss2 = F.binary_cross_entropy_with_logits(mask_1_4, label) + iou_loss(mask_1_4, label)
+        loss1 = F.binary_cross_entropy_with_logits(mask_1_2, label) + iou_loss(mask_1_2, label)
+        loss0 = F.binary_cross_entropy_with_logits(mask_1_1, label) + iou_loss(mask_1_1, label)
         
-        loss = loss_weights[2] * loss2_ + loss_weights[3] * loss3 + loss_weights[4] * loss4
+        loss = loss_weights[0] * loss0 + loss_weights[1] * loss1 + loss_weights[2] * loss2 + loss_weights[2] * loss2_ + loss_weights[3] * loss3 + loss_weights[4] * loss4
 
         scloss3 = consistent_loss(sal_1_8,sal_1_16.detach()) * 0.0001
         scloss2 = consistent_loss(sal_1_4,sal_1_8.detach()) * 0.0001
@@ -71,14 +71,13 @@ def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,train_size):
         opt.step()
         scheduler.step()
         epoch_total_loss += loss.cpu().data.item()
-        #epoch_loss0 += loss0.cpu().data.item()
-        #epoch_loss1 += loss1.cpu().data.item()
-        #epoch_loss2 += loss2.cpu().data.item()
-        epoch_loss2 += loss2_.cpu().data.item()
+        epoch_loss0 += loss0.cpu().data.item()
+        epoch_loss1 += loss1.cpu().data.item()
+        epoch_loss2 += loss2.cpu().data.item()
         #epoch_loss3 += loss3.cpu().data.item()
         #epoch_loss4 += loss4.cpu().data.item()
 
-        progress_bar.set_postfix(loss=f'{epoch_loss2/(i+1):.3f}')
+        progress_bar.set_postfix(loss=f'{epoch_loss0/(i+1):.3f}')
     return epoch_loss0/l
         
 def fit(model, train_dl, epochs=60, lr=1e-4,train_size = 384,save_dir = './loss.txt'):
