@@ -15,7 +15,7 @@ from torchvision import transforms
 import torch.nn.functional as F
 from tqdm import tqdm
 
-from xxSOD import M3Net
+from UGRAN import UGRAN
 def get_pred_dir(model, data_root = '/home/yy/datasets/', save_path = 'preds/',img_size = 384,methods = 'DUT-O+DUTS+ECSSD+HKU-IS+PASCAL-S+SOD'):
     batch_size = 1
     test_paths = methods.split('+')
@@ -58,7 +58,7 @@ def get_pred_dir(model, data_root = '/home/yy/datasets/', save_path = 'preds/',i
 
 def test(args):
     print('Starting test.')
-    model = M3Net(dim=64,img_size=args.img_size,method=args.method,mode='test')
+    model = UGRAN(dim=64,img_size=args.img_size,method=args.method,mode='test')
     model.cuda()
     model.load_state_dict(torch.load(args.save_model+args.method+'.pth'))
     print('Weight is loaded from '+args.save_model+args.method+'.pth.')

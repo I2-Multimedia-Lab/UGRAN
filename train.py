@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 from tqdm import tqdm
-from xxSOD import M3Net
+from UGRAN import UGRAN
 from data.dataloader import RGB_Dataset
 import os
 from torch.optim.lr_scheduler import _LRScheduler
@@ -144,12 +144,12 @@ class PolyLr(_LRScheduler):
         return lrs
     
 def train(args):
-    model = M3Net(dim=64,img_size=args.img_size,method=args.method,mode='train')
-    if args.method == 'M3Net-R':
+    model = UGRAN(dim=64,img_size=args.img_size,method=args.method,mode='train')
+    if args.method == 'UGRAN-R':
         model.encoder.load_state_dict(torch.load(args.pretrained_model+'resnet50.pth'), strict=False)
-    elif args.method == 'M3Net-R2':
+    elif args.method == 'UGRAN-R2':
         model.encoder.load_state_dict(torch.load(args.pretrained_model+'res2net50_v1b_26w_4s-3cf99910.pth', map_location='cpu'), strict=False)
-    elif args.method == 'M3Net-S':
+    elif args.method == 'UGRAN-S':
         model.encoder.load_state_dict(torch.load(args.pretrained_model+'swin_base_patch4_window12_384_22k.pth', map_location='cpu')['model'], strict=False)
 
     print('Pre-trained weight loaded.')
