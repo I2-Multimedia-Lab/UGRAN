@@ -5,8 +5,8 @@ from lib.resnet import ResNet
 from lib.t2t_vit import T2t_vit_t_14
 from lib.res2net_v1b import res2net50_v1b_26w_4s
 from multistage_fusion import decoder
-#from multilevel_interaction import MultilevelInteractionBlock
 from lib.modules import weight_init
+
 class UGRAN(nn.Module):
     r""" Multilevel, Mixed and Multistage Attention Network for Salient Object Detection. 
     
@@ -19,10 +19,7 @@ class UGRAN(nn.Module):
 
     def __init__(self,dim=64,img_size=384,method='UGRAN-S',mode='train'):
         super(UGRAN, self).__init__()
-        if img_size == 384:
-            self.window_size=12
-        else:
-            self.window_size=7
+        self.window_size = img_size // 32
         self.img_size = img_size
         self.feature_dims = []
         self.method = method
@@ -54,10 +51,7 @@ class UGRAN(nn.Module):
         return mask
     
     def to(self, device):
-        #self.image_pyramid.to(device)
-        #self.transition0.to(device)
-        #self.transition1.to(device)
-        #self.transition2.to(device)
+
         self.encoder.to(device)
         self.decoder.to(device)
         super(UGRAN, self).to(device)

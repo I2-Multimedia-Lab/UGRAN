@@ -6,7 +6,7 @@ from data.dataloader import RGB_Dataset
 import os
 from torch.optim.lr_scheduler import _LRScheduler
 import datetime
-from loss import *
+from lib.loss import *
 
 def train_one_epoch(epoch,epochs,model,opt,scheduler,train_dl,train_size):
     epoch_total_loss = 0
@@ -154,7 +154,7 @@ def train(args):
 
     print('Pre-trained weight loaded.')
 
-    train_dataset = RGB_Dataset(root=args.data_root, sets=['DUTS-TR'],img_size=args.img_size,mode='train')
+    train_dataset = RGB_Dataset(root=args.data_root, sets=args.trainset.split('+'),img_size=args.img_size,mode='train')
     train_dl = torch.utils.data.DataLoader(train_dataset, batch_size=args.batch_size, shuffle = True, 
                                                pin_memory=True,num_workers = 4,drop_last = True
                                                )
@@ -169,6 +169,7 @@ def train(args):
     print('Saved as '+args.save_model+args.method+'.pth.')
 
 if __name__ == '__main__':
+    
     # Test
     print(type(str(datetime.datetime.now())))
     

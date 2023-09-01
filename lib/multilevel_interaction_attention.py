@@ -100,6 +100,7 @@ class MIA(nn.Module):
         return flops
         
 if __name__ == '__main__':
+    
     # Test
     model = MIA(dim1=96,dim2=192,dim3=384)
     model.cuda()
