@@ -1,9 +1,15 @@
+# --------------------------------------------------------
+# InSPyReNet
+# Copyright (c) 2021 Taehun Kim
+# Licensed under The MIT License 
+# https://github.com/plemeri/InSPyReNet
+# --------------------------------------------------------
+
 import numpy as np
 from PIL import Image
 import os
 import sys
 import torch
-import torch.nn.functional as F
 from PIL import Image, ImageOps, ImageFilter, ImageEnhance
 from typing import Optional
 
@@ -11,8 +17,6 @@ filepath = os.path.split(__file__)[0]
 repopath = os.path.split(filepath)[0]
 sys.path.append(repopath)
 
-#from utils.misc import *
-        
 class static_resize:
     # Resize for training
     # size: h x w
@@ -32,32 +36,6 @@ class static_resize:
                 
         return sample
 
-class dynamic_resize:
-    # base_size: h x w
-    def __init__(self, L=1280, base_size=[384, 384]): 
-        self.L = L
-        self.base_size = base_size[::-1]
-                    
-    def __call__(self, sample):
-        size = list(sample['image'].size)
-        if (size[0] >= size[1]) and size[1] > self.L: 
-            size[0] = size[0] / (size[1] / self.L)
-            size[1] = self.L
-        elif (size[1] > size[0]) and size[0] > self.L:
-            size[1] = size[1] / (size[0] / self.L)
-            size[0] = self.L
-        size = (int(round(size[0] / 32)) * 32, int(round(size[1] / 32)) * 32)
-    
-        if 'image' in sample.keys():
-            sample['image_resized'] = sample['image'].resize(self.base_size, Image.BILINEAR)
-            sample['image'] = sample['image'].resize(size, Image.BILINEAR)
-            
-        if 'gt' in sample.keys():
-            sample['gt_resized'] = sample['gt'].resize(self.base_size, Image.NEAREST)
-            sample['gt'] = sample['gt'].resize(size, Image.NEAREST)
-        
-        return sample
-        
 class random_scale_crop:
     def __init__(self, range=[0.75, 1.25]):
         self.range = range
@@ -181,6 +159,7 @@ class normalize:
             sample['gt_resized'] /= self.div
 
         return sample
+
 class totensor:
     def __init__(self):
         pass
