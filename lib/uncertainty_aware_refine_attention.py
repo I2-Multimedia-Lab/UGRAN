@@ -1,14 +1,20 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-#from Models.modules import *
 from .modules import *
-import cv2
 import numpy as np
-import datetime
 import time
 class URA(nn.Module):
-    # Window-based Context Attention
+    r""" Uncertainty Refinement Attention. 
+    
+    Args:
+        dim (int): Number of low-level feature channels.
+        dim1, dim2 (int): Number of high-level feature channels.
+        embed_dim (int): Dimension for attention.
+        num_heads (int): Number of attention heads.
+        mlp_ratio (float): Ratio of mlp hidden dim to embedding dim.
+    """
+
     def __init__(self, in_channel, out_channel=1, depth=64, base_size=[384,384], window_size = 12, c_num=3, stage=None):
         super(URA, self).__init__()
         self.base_size=base_size
@@ -36,9 +42,9 @@ class URA(nn.Module):
 
         self.forward = self._forward
 
-        self.ptime = 0.0
-        self.rtime = 0.0
-        self.etime = 0.0
+        self.ptime = 0.0 # partition time
+        self.rtime = 0.0 # reverse time
+        self.etime = 0.0 # execute time
 
     def initialize(self):
         weight_init(self)
@@ -51,6 +57,7 @@ class URA(nn.Module):
         l_w = l.view(B,C,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,C,h,w)
         u_w = umap.view(B,1,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,1,h,w)
         
+        # For partition illustration
         p_w = p.view(B,1,2,h,2,w).permute(2,4,0,1,3,5).contiguous().view(4,B,1,h,w)
         for i in range(0,4):
             p_w[i][0][0][0] = 0.6
@@ -60,14 +67,11 @@ class URA(nn.Module):
         
         et = time.process_time()
         self.ptime+=(et-st)
+        
         for i in range(0,4):
-            #p = np.random.rand()
-            #print(p)
             p = torch.sum(u_w[i])/(h*w)
-            #print(p)
             if (p < self.pthreshold and h > 24) or h > 96: # partition or not
                 x_w[i],p_w[i] = self.DWPA(x_w[i],l_w[i],u_w[i],p_w[i])
-                #x_w[i] = self.DWPA(x_w[i],l_w[i],u_w[i])
             else:
                 st = time.process_time()
                 q = x_w[i].flatten(-2).transpose(-1,-2)
@@ -77,12 +81,13 @@ class URA(nn.Module):
                 umask = u @ u.transpose(-1,-2)           
                 attn_mask = (umask<1).bool()
                 new_attn_mask = torch.zeros_like(attn_mask, dtype=q.dtype)
-                new_attn_mask.masked_fill_(attn_mask, float("-1e10"))
+                new_attn_mask.masked_fill_(attn_mask, float("-1e10")) # as negative infinity
                 attn,_ = self.mha(q,k,v,attn_mask = new_attn_mask)
                 attn = self.conv_out1(attn).transpose(-2,-1).view(B, C, h, w)
                 x_w[i] += attn
                 et = time.process_time()
                 self.etime += (et-st)
+                
         st = time.process_time()
         x_w = x_w.permute(1,2,0,3,4).view(B,C,2,2,h,w).permute(0,1,2,4,3,5).reshape(B,C,H,W)
         p_w = p_w.permute(1,2,0,3,4).view(B,1,2,2,h,w).permute(0,1,2,4,3,5).reshape(B,1,H,W)
