@@ -6,6 +6,7 @@ from lib.t2t_vit import T2t_vit_t_14
 from lib.res2net_v1b import res2net50_v1b_26w_4s
 from multistage_fusion import decoder
 from lib.modules import weight_init
+import time
 
 class UGRAN(nn.Module):
     r""" Multilevel, Mixed and Multistage Attention Network for Salient Object Detection. 
@@ -42,13 +43,19 @@ class UGRAN(nn.Module):
             self.decoder = decoder(in_channels = [64,256,512,1024,2048],depth=dim,base_size=[img_size,img_size],window_size=self.window_size)
 
         self.initialize()
-
+        self.ptime = 0.0 # partition time
+        self.rtime = 0.0 # reverse time
+        self.etime = 0.0 # execute time
     def forward(self,x):
+        st = time.process_time()
+
         fea = self.encoder(x)
         fea_0,fea_1_4,fea_1_8,fea_1_16,fea_1_32 = fea
 
         mask = self.decoder([fea_0,fea_1_4,fea_1_8,fea_1_16,fea_1_32],self.mode)
-        return mask
+        et = time.process_time()
+        self.etime=(et-st)
+        return mask, self.etime
     
     def to(self, device):
 

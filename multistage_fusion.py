@@ -5,6 +5,7 @@ from lib.scale_spatial_consistent_attention import SSCA
 from lib.uncertainty_aware_refine_attention import URA
 from lib.multilevel_interaction_attention import MIA
 from lib.modules import *
+import time
 
 class decoder(nn.Module):
     r""" Multistage decoder. 
@@ -38,6 +39,9 @@ class decoder(nn.Module):
 
         self.image_pyramid = ImagePyramid(7, 1)
         self.uthreshold = 0.5
+        self.ptime = 0.0 # partition time
+        self.utime = 0.0 # reverse time
+        self.etime = 0.0
 
     def to(self, device):
         self.image_pyramid.to(device)
@@ -55,6 +59,9 @@ class decoder(nn.Module):
         weight_init(self)
 
     def forward(self, x, mode):
+        self.ptime = 0.0 # partition time
+        self.utime = 0.0 # reverse time
+        self.etime = 0.0
         H, W = self.base_size
         x1_,x2_,x3_,x4_,x5_ = x
         x5 = self.context5(x5_) #32
@@ -75,19 +82,35 @@ class decoder(nn.Module):
         f3 = F.interpolate(f3, (H//4, W//4), mode='bilinear', align_corners=False)
         f2, s2 = self.fusion2(torch.cat([x2,f3],dim=1))
         c2 = self.image_pyramid.get_uncertain(s2, (H//4, W//4))
-        f2, r2, p2 = self.attention2(f2, l.detach(), c2.detach())
+
+        st = time.process_time()
+        f2, r2, p2, p, e = self.attention2(f2, l.detach(), c2.detach())
+        et = time.process_time()
+        self.utime += (et-st)
+        self.ptime += p
+        self.etime += e
         d2 = self.image_pyramid.reconstruct(s2.detach(), r2) 
 
         #f2 = F.interpolate(f2, (H//2, W //2), mode='bilinear', align_corners=False)
         #l = F.interpolate(l, (H//2, W//2), mode='bilinear', align_corners=False)
         c2 = self.image_pyramid.get_uncertain(d2, (H//4, W//4))
-        f1, r1, p1 = self.attention1(f2, l.detach(), c2.detach()) 
+        st = time.process_time()
+        f1, r1, p1, p, e = self.attention1(f2, l.detach(), c2.detach()) 
+        et = time.process_time()
+        self.utime += (et-st)
+        self.ptime += p
+        self.etime += e
         d1 = self.image_pyramid.reconstruct(d2.detach(), r1) 
 
         #f1 = F.interpolate(f1, (H, W), mode='bilinear', align_corners=False)
         #l = F.interpolate(l, (H, W), mode='bilinear', align_corners=False)
         c1 = self.image_pyramid.get_uncertain(d1, (H//4, W//4))
-        _, r0, p0 = self.attention0(f1,l.detach(), c1.detach()) #2
+        st = time.process_time()
+        _, r0, p0, p, e = self.attention0(f1,l.detach(), c1.detach()) #2
+        et = time.process_time()
+        self.utime += (et-st)
+        self.ptime += p
+        self.etime += e
         d0 = self.image_pyramid.reconstruct(d1.detach(), r0) 
 
         c0 = self.image_pyramid.get_uncertain(d2, (H, W))
@@ -102,7 +125,7 @@ class decoder(nn.Module):
         cv2.imwrite('2.png',np.asarray(xx))
         ''' 
         
-        out = [p2,p1,p0,c2,c1,c0,s4,s3,s2,r2,r1,r0,d2,d1,d0]
+        out = [p2,p1,p0,c2,c1,c0,s4,s3,s2,r2,r1,r0,d2,d1,d0],[self.utime,self.ptime,self.etime]
     
         return out
 
