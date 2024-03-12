@@ -7,14 +7,14 @@ class SSCA(nn.Module):
     r""" Scale Spatial-Consistent Attention. 
     
     Args:
-        dim (int): Number of low-level feature channels.
-        dim1, dim2 (int): Number of high-level feature channels.
+        in_channel (int): Number of input feature channels.
+        dim (int): Number of output feature channels.
         embed_dim (int): Dimension for attention.
         num_heads (int): Number of attention heads.
-        mlp_ratio (float): Ratio of mlp hidden dim to embedding dim.
+        stacked (int): Number of SABlock stacked. Default 2
     """
 
-    def __init__(self, in_channel, depth, dim, num_heads=1, stacked=2, base_size=[384,384], stage=1):
+    def __init__(self, in_channel, dim, embed_dim, num_heads=1, stacked=2, base_size=[384,384], stage=1):
         super(SSCA, self).__init__()
         
         if base_size is not None and stage is not None:
@@ -23,24 +23,23 @@ class SSCA(nn.Module):
             self.stage_size = None
         self.ratio = 2**(4-stage)
         self.stacked = stacked
-        self.dim = dim
+        self.embed_dim = embed_dim
         self.relu = nn.ReLU(inplace=True)
-        self.channel_trans = Conv2d(in_channel,dim,1,bn=False)
-        self.norm = nn.LayerNorm(dim)
+        self.channel_trans = Conv2d(in_channel,embed_dim,1,bn=False)
+        self.norm = nn.LayerNorm(embed_dim)
         self.blocks = nn.ModuleList([
-            SABlock(dim=dim, num_heads=num_heads, mlp_ratio=3., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
+            SABlock(dim=embed_dim, num_heads=num_heads, mlp_ratio=3., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
                  drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm, sr_ratio=self.ratio,)
             for i in range(stacked)])
     
-        self.conv_out1 = Conv2d(dim,depth,1)
+        self.conv_out1 = Conv2d(embed_dim,dim,1)
         
-        #self.conv_out2 = Conv2d(dim, dim, 3, relu=True)
-        self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
-        self.conv_out4 = Conv2d(depth, 1, 1)
+        self.conv_out3 = Conv2d(dim, dim, 3, relu=True)
+        self.conv_out4 = Conv2d(dim, 1, 1)
 
         self.forward = self._forward
         if self.forward == self._ablation:
-            self.res = Conv2d(in_channel,depth,1)
+            self.res = Conv2d(in_channel,dim,1)
             
     def initialize(self):
         weight_init(self)
@@ -67,7 +66,14 @@ class SSCA(nn.Module):
         return x,out
     
 class SA(nn.Module):
-    # Scale Attention
+    r""" Scale Attention. Inspired by PVT ("https://github.com/whai362/PVT")
+    
+    Args:
+        dim (int): Dimension for attention.
+        num_heads (int): Number of attention heads.
+        sr_ratio (int): Number of space resolution reduction ratios.
+    """
+
     def __init__(self, dim, num_heads=1,  qkv_bias=False, qk_scale=None, attn_drop=0., proj_drop=0., sr_ratio=2, ):
         super(SA, self).__init__()
         
@@ -129,7 +135,14 @@ class SA(nn.Module):
     
     
 class SABlock(nn.Module):
-    # Scale Attention Block
+    r""" Scale Attention Block. 
+    
+    Args:
+        dim (int): Dimension for attention.
+        num_heads (int): Number of attention heads.
+        sr_ratio (int): Number of space resolution reduction ratios.
+    """
+
     def __init__(self, dim, num_heads=1, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
                  drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm, sr_ratio=1):
         super(SABlock, self).__init__()
@@ -181,6 +194,7 @@ class Mlp(nn.Module):
         return x
     
 class DWConv(nn.Module):
+    #Deepwise Convolution
     def __init__(self, dim=768):
         super(DWConv, self).__init__()
         self.dwconv = nn.Conv2d(dim, dim, 3, 1, 1, bias=True, groups=dim)

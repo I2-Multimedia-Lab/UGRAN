@@ -239,7 +239,7 @@ class GCT(nn.Module):
 
 class ICE(nn.Module):
 # --------------------------------------------------------
-# InSPyReNet
+# Integrity Channel Enhancement
 # Copyright (c) 2020 mczhuge
 # Licensed under The MIT License 
 # https://github.com/mczhuge/ICON

@@ -9,7 +9,7 @@ from lib.modules import weight_init
 import time
 
 class UGRAN(nn.Module):
-    r""" Multilevel, Mixed and Multistage Attention Network for Salient Object Detection. 
+    r""" Uncertainty Guided Refinement for Fine-grained Salient Object Detection. 
     
     Args:
         embed_dim (int): Dimension for attention. Default 384
@@ -18,7 +18,7 @@ class UGRAN(nn.Module):
         method (string): Backbone used as the encoder.
     """
 
-    def __init__(self,dim=64,img_size=384,method='UGRAN-S',mode='train'):
+    def __init__(self, dim = 64, img_size = 384, method = 'UGRAN-S', mode = 'train'):
         super(UGRAN, self).__init__()
         self.window_size = img_size // 32
         self.img_size = img_size
@@ -27,25 +27,26 @@ class UGRAN(nn.Module):
         self.dim = dim
         self.mode = mode
         if method == 'UGRAN-S':
-            self.encoder = SwinTransformer(pretrain_img_size=img_size, 
-                                        embed_dim=128,
-                                        depths=[2,2,18,2],
-                                        num_heads=[4,8,16,32],
-                                        window_size=self.window_size)
-            self.decoder = decoder(in_channels = [128,128,256,512,1024],base_size=[img_size,img_size],window_size=self.window_size)
+            self.encoder = SwinTransformer(pretrain_img_size = img_size, 
+                                        embed_dim = 128,
+                                        depths = [2,2,18,2],
+                                        num_heads = [4,8,16,32],
+                                        window_size = self.window_size)
+            self.decoder = decoder(in_channels = [128,128,256,512,1024], dim = dim, base_size = [img_size,img_size], window_size = self.window_size)
 
         elif method == 'UGRAN-R':
             self.encoder = ResNet()
-            self.decoder = decoder(in_channels = [64,256,512,1024,2048],base_size=[img_size,img_size],window_size=self.window_size)
+            self.decoder = decoder(in_channels = [64,256,512,1024,2048], dim = dim, base_size = [img_size,img_size], window_size = self.window_size)
 
         elif method == 'UGRAN-R2':
             self.encoder = res2net50_v1b_26w_4s()
-            self.decoder = decoder(in_channels = [64,256,512,1024,2048],depth=dim,base_size=[img_size,img_size],window_size=self.window_size)
+            self.decoder = decoder(in_channels = [64,256,512,1024,2048], dim = dim, base_size = [img_size,img_size], window_size = self.window_size)
 
         self.initialize()
         self.ptime = 0.0 # partition time
         self.rtime = 0.0 # reverse time
         self.etime = 0.0 # execute time
+
     def forward(self,x):
         st = time.process_time()
 
@@ -55,7 +56,7 @@ class UGRAN(nn.Module):
         mask = self.decoder([fea_0,fea_1_4,fea_1_8,fea_1_16,fea_1_32],self.mode)
         et = time.process_time()
         self.etime=(et-st)
-        return mask, self.etime
+        return mask#, self.etime
     
     def to(self, device):
 
@@ -97,7 +98,7 @@ if __name__ == '__main__':
     
     f = torch.randn((1,3,384,384))
     x = model(f.cuda())
-    print()
+    print(len(x))
     for m in x:
         print(m.shape)
     '''print(model.decoder.attention0.ptime)

@@ -15,7 +15,7 @@ class URA(nn.Module):
         mlp_ratio (float): Ratio of mlp hidden dim to embedding dim.
     """
 
-    def __init__(self, in_channel, out_channel=1, depth=64, base_size=[384,384], window_size = 12, c_num=3, stage=None):
+    def __init__(self, in_channel, out_channel=1, dim=64, base_size=[384,384], window_size = 12, stage=None):
         super(URA, self).__init__()
         self.base_size=base_size
         if base_size is not None and stage is not None:
@@ -23,22 +23,20 @@ class URA(nn.Module):
         else:
             self.stage_size = None
         self.ratio = stage
-        self.depth = depth
-        self.depth = depth
-        self.window_size = base_size[0]//8
-        self.channel_trans = Conv2d(c_num,depth,1)
+        self.dim = dim
+        self.window_size = base_size[0] // 8
         self.pthreshold = 0.2
-        self.norm = nn.BatchNorm2d(depth)
-        self.lnorm = nn.BatchNorm2d(depth)
+        self.norm = nn.BatchNorm2d(dim)
+        self.lnorm = nn.BatchNorm2d(dim)
 
-        self.mha = nn.MultiheadAttention(depth,1,batch_first=True)
-        self.q = nn.Linear(depth,depth)
-        self.k = nn.Linear(depth,depth)
-        self.v = nn.Linear(depth,depth)
+        self.mha = nn.MultiheadAttention(dim, 1, batch_first=True)
+        self.q = nn.Linear(dim, dim)
+        self.k = nn.Linear(dim, dim)
+        self.v = nn.Linear(dim, dim)
 
-        self.conv_out1 = nn.Linear(depth,depth)
-        self.conv_out3 = Conv2d(depth, depth, 3, relu=True)
-        self.conv_out4 = Conv2d(depth, out_channel, 1)
+        self.conv_out1 = nn.Linear(dim, dim)
+        self.conv_out3 = Conv2d(dim, dim, 3, relu=True)
+        self.conv_out4 = Conv2d(dim, out_channel, 1)
 
         self.forward = self._forward
 
@@ -95,35 +93,30 @@ class URA(nn.Module):
         self.rtime+=(et-st)
         return x_w,p_w
 
-
-    
     def _forward(self,x,l,umap):
-                
         B,C,H,W = x.shape
-        #umap = self.get_uncertain(smap,(H,W))
         p = torch.ones((B,1,H,W))
-        #print(torch.sum(umap)/(H*W))
-        #_u = (umap>0).bool()
         _u=torch.where(umap>0.01,1.0,0.0)
-        #print(torch.sum(_u)/(H*W))
 
         x,p = self.DWPA(x,l,_u,p)
         x = self.conv_out3(x)
         out = self.conv_out4(x)
         
-        return x, out, p
+        return x, out, p, self.ptime, self.etime
+    
     def _ablation(self,x, map_s,map_l=None):
         out = self.conv_out4(x)
         return x, out, out
     
 def window_partition(x, window_size):
     """
+    Modified from Swin Transformer ("https://github.com/microsoft/Swin-Transformer")
     Args:
         x: (B, H, W, C)
         window_size (int): window size
 
     Returns:
-        windows: (num_windows*B, window_size, window_size, C)
+        windows: (num_windows*B, C, window_size, window_size)
     
     B, H, W, C = x.shape
     x = x.view(B, H // window_size, window_size, W // window_size, window_size, C)
@@ -144,7 +137,7 @@ def window_reverse(windows, window_size, H, W):
         W (int): Width of image
 
     Returns:
-        x: (B, H, W, C)
+        x: (B, C, H, W)
     """
     B = int(windows.shape[0] / (H * W / window_size / window_size))
     x = windows.view(B, H // window_size, W // window_size, window_size, window_size, -1)
