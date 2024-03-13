@@ -14,32 +14,32 @@ class SSCA(nn.Module):
         stacked (int): Number of SABlock stacked. Default 2
     """
 
-    def __init__(self, in_channel, dim, embed_dim, num_heads=1, stacked=2, base_size=[384,384], stage=1):
+    def __init__(self, in_channel, dim, embed_dim, num_heads=1, stacked = 2, base_size = [384, 384], stage = 1):
         super(SSCA, self).__init__()
         
         if base_size is not None and stage is not None:
             self.stage_size = (base_size[0] // 16, base_size[1] // 16)
         else:
             self.stage_size = None
-        self.ratio = 2**(4-stage)
+        self.ratio = 2 ** (4-  stage)
         self.stacked = stacked
         self.embed_dim = embed_dim
         self.relu = nn.ReLU(inplace=True)
-        self.channel_trans = Conv2d(in_channel,embed_dim,1,bn=False)
+        self.channel_trans = Conv2d(in_channel, embed_dim, 1, bn=False)
         self.norm = nn.LayerNorm(embed_dim)
         self.blocks = nn.ModuleList([
-            SABlock(dim=embed_dim, num_heads=num_heads, mlp_ratio=3., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
-                 drop_path=0., act_layer=nn.GELU, norm_layer=nn.LayerNorm, sr_ratio=self.ratio,)
+            SABlock(dim = embed_dim, num_heads = num_heads, mlp_ratio = 3., qkv_bias = False, qk_scale = None, drop = 0., attn_drop = 0.,
+                 drop_path = 0., act_layer = nn.GELU, norm_layer = nn.LayerNorm, sr_ratio = self.ratio,)
             for i in range(stacked)])
     
-        self.conv_out1 = Conv2d(embed_dim,dim,1)
+        self.conv_out1 = Conv2d(embed_dim, dim, 1)
         
-        self.conv_out3 = Conv2d(dim, dim, 3, relu=True)
+        self.conv_out3 = Conv2d(dim, dim, 3, relu = True)
         self.conv_out4 = Conv2d(dim, 1, 1)
 
         self.forward = self._forward
         if self.forward == self._ablation:
-            self.res = Conv2d(in_channel,dim,1)
+            self.res = Conv2d(in_channel, dim, 1)
             
     def initialize(self):
         weight_init(self)

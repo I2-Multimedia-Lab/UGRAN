@@ -15,27 +15,25 @@ class URA(nn.Module):
         mlp_ratio (float): Ratio of mlp hidden dim to embedding dim.
     """
 
-    def __init__(self, in_channel, out_channel=1, dim=64, base_size=[384,384], window_size = 12, stage=None):
+    def __init__(self, in_channel, out_channel = 1, dim = 64, base_size = [384,384], stage = None):
         super(URA, self).__init__()
-        self.base_size=base_size
-        if base_size is not None and stage is not None:
-            self.stage_size = (base_size[0] // (2 ** stage), base_size[1] // (2 ** stage))
-        else:
-            self.stage_size = None
+
+        self.base_size = base_size
         self.ratio = stage
         self.dim = dim
-        self.window_size = base_size[0] // 8
+        self.min_size = base_size[0] // 16
+        self.max_size = base_size[0] // 4
         self.pthreshold = 0.2
         self.norm = nn.BatchNorm2d(dim)
         self.lnorm = nn.BatchNorm2d(dim)
 
-        self.mha = nn.MultiheadAttention(dim, 1, batch_first=True)
+        self.mha = nn.MultiheadAttention(dim, 1, batch_first = True)
         self.q = nn.Linear(dim, dim)
         self.k = nn.Linear(dim, dim)
         self.v = nn.Linear(dim, dim)
 
         self.conv_out1 = nn.Linear(dim, dim)
-        self.conv_out3 = Conv2d(dim, dim, 3, relu=True)
+        self.conv_out3 = Conv2d(dim, dim, 3, relu = True)
         self.conv_out4 = Conv2d(dim, out_channel, 1)
 
         self.forward = self._forward
@@ -47,7 +45,7 @@ class URA(nn.Module):
     def initialize(self):
         weight_init(self)
         
-    def DWPA(self, x, l, umap, p):
+    def ADP(self, x, l, umap, p):
         B,C,H,W = x.shape
         h,w = [H//2,W//2]
         st = time.process_time()
@@ -68,8 +66,8 @@ class URA(nn.Module):
         
         for i in range(0,4):
             p = torch.sum(u_w[i])/(h*w)
-            if (p < self.pthreshold and h > 24) or h > 96: # partition or not
-                x_w[i],p_w[i] = self.DWPA(x_w[i],l_w[i],u_w[i],p_w[i])
+            if (p < self.pthreshold and h > self.min_size) or h > self.max_size: # partition or not
+                x_w[i],p_w[i] = self.ADP(x_w[i],l_w[i],u_w[i],p_w[i])
             else:
                 st = time.process_time()
                 q = x_w[i].flatten(-2).transpose(-1,-2)
@@ -93,18 +91,18 @@ class URA(nn.Module):
         self.rtime+=(et-st)
         return x_w,p_w
 
-    def _forward(self,x,l,umap):
+    def _forward(self, x, l, umap):
         B,C,H,W = x.shape
         p = torch.ones((B,1,H,W))
         _u=torch.where(umap>0.01,1.0,0.0)
 
-        x,p = self.DWPA(x,l,_u,p)
+        x,p = self.ADP(x,l,_u,p)
         x = self.conv_out3(x)
         out = self.conv_out4(x)
         
         return x, out, p, self.ptime, self.etime
     
-    def _ablation(self,x, map_s,map_l=None):
+    def _ablation(self, x, l, umap):
         out = self.conv_out4(x)
         return x, out, out
     

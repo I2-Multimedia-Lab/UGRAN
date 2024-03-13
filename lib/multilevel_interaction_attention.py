@@ -23,8 +23,8 @@ class MIA(nn.Module):
         self.dim3 = dim3
 
         self.norm0 = norm_layer(self.embed_dim)
-        self.ca = SE(dim=self.dim)
-        self.ct = Conv2d(self.dim,self.embed_dim,1)
+        self.ca = SE(dim = self.dim)
+        self.ct = Conv2d(self.dim, self.embed_dim,1)
 
         if self.dim1:
             #self.ca1 = SE(dim=dim1)

@@ -11,12 +11,12 @@ class decoder(nn.Module):
     r""" Multistage decoder. 
     
     Args:
-        embed_dim (int): Dimension for attention. Default 384
-        dim (int): Patch embedding dimension. Default 96
-        img_size (int): Input image size. Default 224
-        mlp_ratio (float): Ratio of mlp hidden dim to embedding dim.
+        in_channels (tuple): Number of input feature channels. 
+        dim (int): Patch embedding dimension. Default 64
+        base_size (int): Input image size. Default 384
+
     """
-    def __init__(self, in_channels = [128,128,256,512,1024], dim = 64, base_size = [384, 384], window_size = 12):
+    def __init__(self, in_channels = [128, 128, 256, 512, 1024], dim = 64, base_size = [384, 384]):
         super(decoder, self).__init__()
         self.in_channels = in_channels
         self.dim = dim
@@ -33,9 +33,9 @@ class decoder(nn.Module):
         self.fusion3 = SSCA(in_channel = dim * 2, dim = dim, embed_dim = self.dim * 4, num_heads = 2, stacked = 1, stage = 3)
         self.fusion2 = SSCA(in_channel = dim * 2, dim = dim, embed_dim = self.dim * 2, num_heads = 1, stacked = 1, stage = 2)
 
-        self.attention0 = URA(self.dim, dim = self.dim, base_size = self.base_size, window_size = window_size, stage = 0)
-        self.attention1 = URA(self.dim, dim = self.dim, base_size = self.base_size, window_size = window_size, stage = 1)
-        self.attention2 = URA(self.dim, dim = self.dim, base_size = self.base_size, window_size = window_size, stage = 2)
+        self.attention0 = URA(self.dim, dim = self.dim, base_size = self.base_size, stage = 0)
+        self.attention1 = URA(self.dim, dim = self.dim, base_size = self.base_size, stage = 1)
+        self.attention2 = URA(self.dim, dim = self.dim, base_size = self.base_size, stage = 2)
 
         self.image_pyramid = ImagePyramid(7, 1)
         self.uthreshold = 0.5
@@ -59,6 +59,7 @@ class decoder(nn.Module):
         weight_init(self)
 
     def forward(self, x, mode):
+
         self.ptime = 0.0 # partition time
         self.utime = 0.0 # reverse time
         self.etime = 0.0
