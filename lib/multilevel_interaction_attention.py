@@ -28,11 +28,19 @@ class MIA(nn.Module):
 
         if self.dim1:
             #self.ca1 = SE(dim=dim1)
-            self.interact1 = CrossAttention(dim1 = self.embed_dim,dim2 = dim1,dim = self.embed_dim,num_heads=num_heads,qkv_bias=qkv_bias,qk_scale=qk_scale,attn_drop=attn_drop,proj_drop=drop)
+            self.interact1 = nn.Sequential(
+                Conv2d(self.embed_dim+self.dim1,self.embed_dim,3,1,1,relu=True),
+                Conv2d(self.embed_dim,self.embed_dim,3,1,1,relu=False),
+            )
+            #CrossAttention(dim1 = self.embed_dim,dim2 = dim1,dim = self.embed_dim,num_heads=num_heads,qkv_bias=qkv_bias,qk_scale=qk_scale,attn_drop=attn_drop,proj_drop=drop)
             self.norm1 = norm_layer(dim1)
         if self.dim2:
             #self.ca2 = SE(dim=dim2)
-            self.interact2 = CrossAttention(dim1 = self.embed_dim,dim2 = dim2,dim = self.embed_dim,num_heads=num_heads,qkv_bias=qkv_bias,qk_scale=qk_scale,attn_drop=attn_drop,proj_drop=drop)
+            self.interact2 = nn.Sequential(
+                Conv2d(self.embed_dim+self.dim2,self.embed_dim,3,1,1,relu=True),
+                Conv2d(self.embed_dim,self.embed_dim,3,1,1,relu=False),
+            )
+            #CrossAttention(dim1 = self.embed_dim,dim2 = dim2,dim = self.embed_dim,num_heads=num_heads,qkv_bias=qkv_bias,qk_scale=qk_scale,attn_drop=attn_drop,proj_drop=drop)
             self.norm2 = norm_layer(dim2)
         if self.dim3:
             #self.ca2 = SE(dim=dim2)
@@ -40,8 +48,10 @@ class MIA(nn.Module):
             self.norm3 = norm_layer(dim3)
 
         self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
-        self.proj = Conv2d(self.embed_dim,out_channel,1)
-        
+        self.proj = nn.Sequential(
+            Conv2d(self.embed_dim,self.embed_dim,3),
+            Conv2d(self.embed_dim,out_channel,1)
+        )        
         self.forward = self._forward
         if self.forward == self._ablation:
             self.res = Conv2d(in_channel,out_channel,1)
@@ -54,18 +64,20 @@ class MIA(nn.Module):
         fea = self.ct(fea)
         if self.dim1!=None and fea_1!=None:
             B,_,H,W = fea.shape
-            fea = fea.reshape(B,self.embed_dim,-1).transpose(1,2)
-            fea = self.norm0(fea)
+            #fea = fea.reshape(B,self.embed_dim,-1).transpose(1,2)
+            #fea = self.norm0(fea)
             _,C,_,_ = fea_1.shape
-            fea_1 = fea_1.reshape(B,C,-1).transpose(1,2)
-            fea_1 = self.norm1(fea_1)
-            fea_1 = self.interact1(fea,fea_1)
+            #fea_1 = fea_1.reshape(B,C,-1).transpose(1,2)
+            #fea_1 = self.norm1(fea_1)
+            fea_1 = F.interpolate(fea_1, fea.shape[2:], mode = 'bilinear', align_corners = False)
+            fea_1 = self.interact1(torch.concat([fea,fea_1],dim=1))
                 
             if self.dim2!=None and fea_2!=None:
-                _,C,_,_ = fea_2.shape
-                fea_2 = fea_2.reshape(B,C,-1).transpose(1,2)
-                fea_2 = self.norm2(fea_2)
-                fea_2 = self.interact2(fea,fea_2)
+                #_,C,_,_ = fea_2.shape
+                #fea_2 = fea_2.reshape(B,C,-1).transpose(1,2)
+                #fea_2 = self.norm2(fea_2)
+                fea_2 = F.interpolate(fea_2, fea.shape[2:], mode = 'bilinear', align_corners = False)
+                fea_2 = self.interact1(torch.concat([fea,fea_2],dim=1))
             if self.dim3!=None and fea_3!=None:
                 fea_3 = fea_3.reshape(B,self.dim3,-1).transpose(1,2)
                 fea_3 = self.norm3(fea_3)
@@ -76,7 +88,7 @@ class MIA(nn.Module):
             if self.dim3!=None and fea_3!=None:
                 fea = fea + fea_3
             #fea = fea + self.drop_path(self.mlp(self.norm(fea)))
-            fea = fea.transpose(1,2).reshape(B,self.embed_dim,H,W)
+            #fea = fea.transpose(1,2).reshape(B,self.embed_dim,H,W)
         fea = self.proj(fea)
         return fea
 

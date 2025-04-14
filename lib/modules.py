@@ -142,7 +142,7 @@ def weight_init(module):
                 nn.init.constant_(m.bias, 0)
         elif isinstance(m, (nn.Sequential,nn.ModuleList)):
             weight_init(m)
-        elif isinstance(m, (nn.ReLU, nn.GELU, nn.Sigmoid, nn.PReLU, nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.AdaptiveAvgPool1d, nn.Sigmoid, nn.Identity, nn.Upsample, nn.Dropout, nn.MultiheadAttention, nn.MaxPool2d)):
+        elif isinstance(m, (nn.Conv1d, nn.ReLU, nn.GELU, nn.Sigmoid, nn.PReLU, nn.AvgPool2d, nn.AdaptiveAvgPool2d, nn.AdaptiveAvgPool1d, nn.Sigmoid, nn.Identity, nn.Upsample, nn.Dropout, nn.MultiheadAttention, nn.MaxPool2d)):
             pass
         else:
             m.initialize()

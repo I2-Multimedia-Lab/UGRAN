@@ -21,7 +21,7 @@ class SSCA(nn.Module):
             self.stage_size = (base_size[0] // 16, base_size[1] // 16)
         else:
             self.stage_size = None
-        self.ratio = 2 ** (4-  stage)
+        self.ratio = 2 ** (4 - stage)
         self.stacked = stacked
         self.embed_dim = embed_dim
         self.relu = nn.ReLU(inplace=True)
@@ -37,7 +37,7 @@ class SSCA(nn.Module):
         self.conv_out3 = Conv2d(dim, dim, 3, relu = True)
         self.conv_out4 = Conv2d(dim, 1, 1)
 
-        self.forward = self._forward
+        self.forward = self._ablation
         if self.forward == self._ablation:
             self.res = Conv2d(in_channel, dim, 1)
             

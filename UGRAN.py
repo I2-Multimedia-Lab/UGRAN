@@ -32,15 +32,15 @@ class UGRAN(nn.Module):
                                         depths = [2,2,18,2],
                                         num_heads = [4,8,16,32],
                                         window_size = self.window_size)
-            self.decoder = decoder(in_channels = [128,128,256,512,1024], dim = dim, base_size = [img_size,img_size], window_size = self.window_size)
+            self.decoder = decoder(in_channels = [128,128,256,512,1024], dim = dim, base_size = [img_size,img_size])
 
         elif method == 'UGRAN-R':
             self.encoder = ResNet()
-            self.decoder = decoder(in_channels = [64,256,512,1024,2048], dim = dim, base_size = [img_size,img_size], window_size = self.window_size)
+            self.decoder = decoder(in_channels = [64,256,512,1024,2048], dim = dim, base_size = [img_size,img_size])
 
         elif method == 'UGRAN-R2':
             self.encoder = res2net50_v1b_26w_4s()
-            self.decoder = decoder(in_channels = [64,256,512,1024,2048], dim = dim, base_size = [img_size,img_size], window_size = self.window_size)
+            self.decoder = decoder(in_channels = [64,256,512,1024,2048], dim = dim, base_size = [img_size,img_size])
 
         self.initialize()
         self.ptime = 0.0 # partition time
@@ -113,8 +113,8 @@ if __name__ == '__main__':
     import torch
     from ptflops import get_model_complexity_info
 
-    #macs, params = get_model_complexity_info(model, (3, 384, 384), as_strings=True, print_per_layer_stat=True, verbose=True)
+    macs, params = get_model_complexity_info(model, (3, 384, 384), as_strings=True, print_per_layer_stat=True, verbose=True)
 
-    #print('{:<30}  {:<8}'.format('macs: ', macs))
-    #print('{:<30}  {:<8}'.format('parameters: ', params))
+    print('{:<30}  {:<8}'.format('macs: ', macs))
+    print('{:<30}  {:<8}'.format('parameters: ', params))
     

@@ -1,5 +1,5 @@
 # Uncertainty Guided Refinement for Fine-grained Salient Object Detection
-Source code of 'Uncertainty Guided Refinement for Fine-grained Salient Object Detection'. 
+Source code of 'Uncertainty Guided Refinement for Fine-grained Salient Object Detection', which is accepted by TIP 2025.
 ![](./figures/Overview.png)
 
 ## Environment
@@ -65,6 +65,16 @@ We also appreciate the data loading and enhancement code provided by [plemeri](h
 If you think our work is helpful, please cite 
 
 ```
+@ARTICLE{10960487,
+  author={Yuan, Yao and Gao, Pan and Dai, Qun and Qin, Jie and Xiang, Wei},
+  journal={IEEE Transactions on Image Processing}, 
+  title={Uncertainty Guided Refinement for Fine-Grained Salient Object Detection}, 
+  year={2025},
+  volume={},
+  number={},
+  pages={1-1},
+  keywords={Uncertainty;Feature extraction;Adaptation models;Predictive models;Object detection;Location awareness;Training;Decoding;Computational modeling;Adaptive systems;Salient object detection;fine-grained prediction;uncertainty guided learning;adaptive partition},
+  doi={10.1109/TIP.2025.3557562}}
 
 ```
 

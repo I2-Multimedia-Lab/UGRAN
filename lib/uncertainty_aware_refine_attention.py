@@ -36,7 +36,7 @@ class URA(nn.Module):
         self.conv_out3 = Conv2d(dim, dim, 3, relu = True)
         self.conv_out4 = Conv2d(dim, out_channel, 1)
 
-        self.forward = self._forward
+        self.forward = self._ablation
 
         self.ptime = 0.0 # partition time
         self.rtime = 0.0 # reverse time
@@ -104,7 +104,7 @@ class URA(nn.Module):
     
     def _ablation(self, x, l, umap):
         out = self.conv_out4(x)
-        return x, out, out
+        return x, out, out, self.ptime,self.etime
     
 def window_partition(x, window_size):
     """
