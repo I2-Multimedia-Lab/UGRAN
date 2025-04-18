@@ -1,5 +1,5 @@
 # Uncertainty Guided Refinement for Fine-grained Salient Object Detection
-Source code of 'Uncertainty Guided Refinement for Fine-grained Salient Object Detection', which is accepted by TIP 2025.
+Source code of 'Uncertainty Guided Refinement for Fine-grained Salient Object Detection', which is accepted by TIP 2025. You can check the manuscript on [Arxiv](https://arxiv.org/abs/2504.09666) or [IEEE](ieeexplore.ieee.org/document/10960487). 
 ![](./figures/Overview.png)
 
 ## Environment
