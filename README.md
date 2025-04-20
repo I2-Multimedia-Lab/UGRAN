@@ -13,7 +13,7 @@ All datasets used can be downloaded at [here](https://pan.baidu.com/s/1fw4uB6W8p
 We use the training set of [DUTS](http://saliencydetection.net/duts/) to train our UGRAN. 
 
 ### Testing Set
-We use the testing set of [DUTS](http://saliencydetection.net/duts/), [ECSSD](http://www.cse.cuhk.edu.hk/leojia/projects/hsaliency/dataset.html), [HKU-IS](https://i.cs.hku.hk/~gbli/deep_saliency.html), [PASCAL-S](http://cbi.gatech.edu/salobj/), [DUT-O](http://saliencydetection.net/dut-omron/), and [SOD](http://elderlab.yorku.ca/SOD.) to test our UGRAN. After Downloading, put them into `/datasets` folder.
+We use the testing set of [DUTS](http://saliencydetection.net/duts/), [ECSSD](http://www.cse.cuhk.edu.hk/leojia/projects/hsaliency/dataset.html), [HKU-IS](https://i.cs.hku.hk/~gbli/deep_saliency.html), [PASCAL-S](http://cbi.gatech.edu/salobj/), [DUT-O](http://saliencydetection.net/dut-omron/), and [SOD](http://elderlab.yorku.ca/SOD.) to test our UGRAN. After downloading, put them into `/datasets` folder.
 
 Your `/datasets` folder should look like this:
 
@@ -32,7 +32,7 @@ Your `/datasets` folder should look like this:
 ````
 
 ## Training and Testing
-1. Download the pretrained backbone weights and put it into `pretrained_model/` folder. [ResNet](https://pan.baidu.com/s/1JBEa06CT4hYh8hR7uuJ_3A) [uxcz], [SwinTransformer](https://github.com/microsoft/Swin-Transformer) 
+1. Download the pretrained backbone weights and put them into `pretrained_model/` folder. [ResNet](https://pan.baidu.com/s/1JBEa06CT4hYh8hR7uuJ_3A) [uxcz], [SwinTransformer](https://github.com/microsoft/Swin-Transformer) 
 are currently supported. <!--, [T2T-ViT](https://github.com/yitu-opensource/T2T-ViT), [EfficientNet](https://github.com/lukemelas/EfficientNet-PyTorch)  -->
 
 2. Run `python train_test.py --train=True --test=True --eval=True --record='record.txt'` for training and testing. The predictions will be in `preds/` folder and the training records will be in `record.txt` file. 
@@ -42,7 +42,7 @@ Pre-calculated saliency maps: [UGRAN-R](https://pan.baidu.com/s/1TOib2DkstrBXuvb
 Pre-trained weights: [UGRAN-R](https://pan.baidu.com/s/1T_a6e0Gl-y-ux863ZqQZDg) [c3eq], [UGRAN-S](https://pan.baidu.com/s/1HkzImadLxYT_SpFR0pjBMw) [n7tr]
 
 For *PR curve* and *F curve*, we use the code provided by this repo: [[BASNet, CVPR-2019]](https://github.com/xuebinqin/Binary-Segmentation-Evaluation-Tool). \
-For *MAE*, *Weighted F measure*, *E score* and *S score*, we use the code provided by this repo: [[PySODMetrics]](https://github.com/lartpang/PySODMetrics). 
+For *MAE*, *Weighted F measure*, *E score*, and *S score*, we use the code provided by this repo: [[PySODMetrics]](https://github.com/lartpang/PySODMetrics). 
 
 <!--For more information about evaluation, please refer to `Evaluation/Guidance.md`.  -->
 
@@ -58,7 +58,7 @@ For *MAE*, *Weighted F measure*, *E score* and *S score*, we use the code provid
 ![](./figures/Visual_Comparison.png)
 
 ## Acknowledgement
-Our idea is inspired by [InSPyReNet](https://github.com/plemeri/inspyrenet) and [MiNet](https://github.com/lartpang/MINet). Thanks for their excellent works. 
+Our idea is inspired by [InSPyReNet](https://github.com/plemeri/inspyrenet) and [MiNet](https://github.com/lartpang/MINet). Thanks for their excellent work. 
 We also appreciate the data loading and enhancement code provided by [plemeri](https://github.com/plemeri), as well as the efficient evaluation tool provided by [lartpang](https://github.com/lartpang/PySODMetrics). 
 
 ## Citation
@@ -68,13 +68,11 @@ If you think our work is helpful, please cite
 @ARTICLE{10960487,
   author={Yuan, Yao and Gao, Pan and Dai, Qun and Qin, Jie and Xiang, Wei},
   journal={IEEE Transactions on Image Processing}, 
-  title={Uncertainty Guided Refinement for Fine-Grained Salient Object Detection}, 
+  title={Uncertainty-Guided Refinement for Fine-Grained Salient Object Detection}, 
   year={2025},
-  volume={},
+  volume={34},
   number={},
-  pages={1-1},
-  keywords={Uncertainty;Feature extraction;Adaptation models;Predictive models;Object detection;Location awareness;Training;Decoding;Computational modeling;Adaptive systems;Salient object detection;fine-grained prediction;uncertainty guided learning;adaptive partition},
+  pages={2301-2314},
   doi={10.1109/TIP.2025.3557562}}
-
 ```
 
